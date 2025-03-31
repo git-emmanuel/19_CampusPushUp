@@ -7,18 +7,19 @@ import sys
 # Initialize pygame mixer for sound
 pygame.mixer.init()
 
+# Initialize MediaPipe Pose module
+mp_pose = mp.solutions.pose
+drawing_utils = mp.solutions.drawing_utils
+pushup_count = 0
+direction = None  # "down" or "up"
+
+
 def play_sound():
     """Play a sound when a push-up is detected."""
     pygame.mixer.init()  # Initialize the mixer
     pygame.mixer.music.load("drum.wav")  # Ensure this file is in the same directory or provide full path
     pygame.mixer.music.play()
 
-# Initialize MediaPipe Pose module
-mp_pose = mp.solutions.pose
-drawing_utils = mp.solutions.drawing_utils
-
-pushup_count = 0
-direction = None  # "down" or "up"
 
 def calculate_angle(a, b, c):
     """Calculate the angle between three points: a (shoulder), b (elbow), and c (wrist)."""
@@ -34,6 +35,7 @@ def calculate_angle(a, b, c):
 
     angle = math.degrees(math.acos(dot_product / (magnitude_ba * magnitude_bc)))
     return angle
+
 
 def detect_pushup(pose_landmarks):
     """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
@@ -54,6 +56,7 @@ def detect_pushup(pose_landmarks):
         direction = "up"
         pushup_count += 1
         play_sound()
+
 
 def draw_pose_results(image, results):
     """Draw elbow, wrist, and shoulder landmarks with lines between them and display the push-up count."""
@@ -85,6 +88,7 @@ def draw_pose_results(image, results):
     cv2.putText(image, f"Push-up Count: {pushup_count}", (30, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
     
     return image
+
 
 def run_pushup_counter(video_path='webcam'):
     """Run the push-up counter using a webcam or a video file."""
@@ -118,6 +122,7 @@ def run_pushup_counter(video_path='webcam'):
     
     cap.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     """Entry point: Accept a video path argument from the command line."""
