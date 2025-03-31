@@ -1,5 +1,5 @@
 
-# CampusPushUp by Romain, Emmanuel and Karim
+# Computer Vision project CampusPushUp
 
 <img src="logo.png" width="200" />
 
