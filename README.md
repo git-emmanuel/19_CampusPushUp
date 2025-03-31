@@ -1,5 +1,5 @@
 
-# Computer Vision project CampusPushUp
+# Computer Vision Project
 
 <img src="logo.png" width="200" />
 
