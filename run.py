@@ -47,6 +47,27 @@ def calculate_angle(a, b, c):
     angle = math.degrees(math.acos(dot_product / (magnitude_ba * magnitude_bc)))
     return angle
 
+def detect_pushup(pose_landmarks):
+    """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
+    global pushup_count, direction, sparkle_frames  # Add sparkle_frames to global variables
+
+    shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+    elbow = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
+    wrist = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
+    elbow_angle = calculate_angle(shoulder, elbow, wrist)
+
+    # Going down when elbow angle is decreasing
+    if elbow_angle < 120 and direction != "down":
+        direction = "down"
+
+    # Going up when elbow angle goes back above ~160°
+    elif elbow_angle > 140 and direction == "down":
+        direction = "up"
+        pushup_count += 1
+        sparkle_frames = 10  # Trigger sparkles for next 10 frames
+        play_sound()
+    
+
 
 def detect_pushup(pose_landmarks):
     """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
@@ -66,38 +87,25 @@ def detect_pushup(pose_landmarks):
 
 
     # Going down when elbow angle is decreasing
-    if elbow_angle_left < 100 and direction_left != "down":
+    if elbow_angle_left < 120 and direction_left != "down":
         direction_left = "down"
 
-    if elbow_angle_right < 100 and direction_right != "down":
+    if elbow_angle_right < 120 and direction_right != "down":
         direction_right = "down"
 
-    # Initialize the flag and time
-    pushup_detected_left=pushup_detected_right=False
-    current_time_left=current_time_right=time.time()
-
     # Going up when elbow angle goes back above ~160°
-    if elbow_angle_left > 160 and direction_left == "down":
+    if elbow_angle_left > 140 and direction_left == "down":
         direction_left = "up"
         pushup_count_left += 1
-        current_time_left=time.time()
-        pushup_detected_left = True
+        sparkle_frames = 10  # Trigger sparkles for next 10 frames
+        play_sound()
 
-    if elbow_angle_right > 160 and direction_right == "down":
+
+    if elbow_angle_right > 140 and direction_right == "down":
         direction_right = "up"
         pushup_count_right += 1
-        current_time_right=time.time()
-        pushup_detected_right = True
-
-    if (pushup_detected_left or pushup_detected_right) and abs(current_time_left-current_time_right)>0.5:
-        pushup_count += 1
+        sparkle_frames = 10  # Trigger sparkles for next 10 frames
         play_sound()
-
-    if (pushup_detected_left and pushup_detected_right) and abs(current_time_left-current_time_right)<0.5:
-        pushup_count += 1
-        play_sound()
-
-    
 
 
 def overlay_image(background, overlay, x, y, scale=0.25):
