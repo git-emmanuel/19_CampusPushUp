@@ -87,7 +87,7 @@ def draw_text_with_background(image, text, position):
 
 def draw_pose_results(image, results):
     """Draw elbow, wrist, and shoulder landmarks with lines between them and display the push-up count."""
-    global pushup_count, pushup_count_left,pushup_count_right, sparkle_frames, previous_position_label
+    global pushup_count, sparkle_frames, previous_position_label
     
     if results.pose_landmarks:
     
@@ -135,14 +135,14 @@ def draw_pose_results(image, results):
         pushup_count +=1
         sparkle_frames = 10  # Trigger sparkles for next 10 frames
         play_sound()
-
     previous_position_label=position_label
 
     # Display push-up count and controls with black text on a white stripe
     draw_text_with_background(image, "Press 'r' to reset count", (30, 30))
     draw_text_with_background(image, "Press 'q' to quit", (30, 60))
-    draw_text_with_background(image, f"Push-up Count: {pushup_count}", (30, 90))
-    draw_text_with_background(image, f"AI classification: {position_label}", (30, 120))
+    draw_text_with_background(image, "Press 'f' for full screen", (30, 90))
+    draw_text_with_background(image, f"Push-up Count: {pushup_count}", (30, 120))
+    draw_text_with_background(image, f"AI classification: {position_label}", (30, 150))
 
     
     # Add logo to the image at the top right corner
@@ -184,11 +184,17 @@ def classify_position(pose_landmarks):
 
 def run_pushup_counter(video_path='webcam'):
     """Run the push-up counter using a webcam or a video file."""
-    global pushup_count,pushup_count_left,pushup_count_right
+    global pushup_count
     
     cap = cv2.VideoCapture(0) if video_path == 'webcam' else cv2.VideoCapture(video_path)
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
     
+    # Set resolution to 1920x1080 (widescreen)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)  # Set width (widescreen)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)  # Set height (widescreen)
+
+    # Create a window with the ability to resize
+    cv2.namedWindow('Push-up Counter', cv2.WINDOW_NORMAL)
     
     while cap.isOpened():
         success, image = cap.read()
@@ -212,8 +218,12 @@ def run_pushup_counter(video_path='webcam'):
             break
         elif key == ord('r'):
             pushup_count = 0
-            pushup_count_left = 0
-            pushup_count_right = 0
+        elif key == ord('f'):  # Press 'f' to toggle fullscreen
+            # Toggle fullscreen mode
+            if cv2.getWindowProperty('Push-up Counter', cv2.WND_PROP_FULLSCREEN) == cv2.WINDOW_NORMAL:
+                cv2.setWindowProperty('Push-up Counter', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            else:
+                cv2.setWindowProperty('Push-up Counter', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
     
     cap.release()
     cv2.destroyAllWindows()
