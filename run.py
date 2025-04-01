@@ -13,10 +13,10 @@ pygame.mixer.init()
 
 # Initialize MediaPipe Pose module
 mp_pose = mp.solutions.pose
-drawing_utils = mp.solutions.drawing_utils
+
+
 pushup_count = 0 # Init pushup_count
 previous_position_label = None # Init position_label
-direction = None  # "down" or "up"
 sparkle_frames = 0  # Counter for sparkle duration
 
 # Use Model in Real-Time Detection
@@ -161,24 +161,28 @@ def draw_pose_results(image, results):
 def classify_position(pose_landmarks):
     """Predict position using trained decision tree."""
     if pose_landmarks is None:
-        return "waiting..."  # Return a default label if no landmarks are detected
-    
-    shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
-    hip = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
-    knee = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
-    elbow = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
-    wrist = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
+        output = "waiting..."  # Return a default label if no landmarks are detected
 
-    # Compute distances and elbow angle
-    shoulder_hip_dist = math.dist([shoulder.x, shoulder.y], [hip.x, hip.y])
-    hip_knee_dist = math.dist([hip.x, hip.y], [knee.x, knee.y])
-    elbow_angle = calculate_angle(shoulder, elbow, wrist)
+    else:
+        shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+        hip = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
+        knee = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
+        elbow = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
+        wrist = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
 
-    # Include elbow angle if the classifier was trained with it
-    feature_names = ["shoulder_hip_dist", "hip_knee_dist", "elbow_angle"]
-    features = pd.DataFrame([[shoulder_hip_dist, hip_knee_dist, elbow_angle]], columns=feature_names)
+        # Compute distances and angles
+        features_dict={}
+        features_dict['shoulder_hip_dist'] = math.dist([shoulder.x, shoulder.y], [hip.x, hip.y])
+        features_dict['hip_knee_dist'] = math.dist([hip.x, hip.y], [knee.x, knee.y])
+        features_dict['elbow_angle'] = calculate_angle(shoulder, elbow, wrist)
 
-    return clf.predict(features)[0]
+        # Convert to dataframe
+        features = pd.DataFrame(features_dict,index=['value'])
+
+        # Predict position
+        output=clf.predict(features)[0]
+
+    return output
 
 
 
