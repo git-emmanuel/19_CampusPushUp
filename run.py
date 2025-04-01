@@ -4,6 +4,7 @@ import pygame
 import math
 import sys
 import numpy as np
+import joblib
 
 # Initialize pygame mixer for sound
 pygame.mixer.init()
@@ -14,6 +15,9 @@ drawing_utils = mp.solutions.drawing_utils
 pushup_count = 0
 direction = None  # "down" or "up"
 sparkle_frames = 0  # Counter for sparkle duration
+
+# Use Model in Real-Time Detection
+clf = joblib.load("classifier.pkl") #! the trained model
 
 def play_sound():
     """Play a sound when a push-up is detected."""
@@ -36,6 +40,7 @@ def calculate_angle(a, b, c):
 
     angle = math.degrees(math.acos(dot_product / (magnitude_ba * magnitude_bc)))
     return angle
+
 
 
 def detect_pushup(pose_landmarks):
@@ -127,6 +132,9 @@ def draw_pose_results(image, results):
     draw_text_with_background(image, "Press 'q' to quit", (30, 60))
     draw_text_with_background(image, f"Push-up Count: {pushup_count}", (30, 90))
     
+    position_label = classify_position(results.pose_landmarks)
+    draw_text_with_background(image, f"AI classification: {position_label}", (30, 120))
+    
     # Add logo to the image at the top right corner
     logo = cv2.imread("logo.png", cv2.IMREAD_UNCHANGED)
     if logo is not None:
@@ -138,6 +146,26 @@ def draw_pose_results(image, results):
         sparkle_frames -= 1  # Decrease count each frame
 
     return image
+
+
+def classify_position(pose_landmarks):
+    """Predict position using trained decision tree."""
+    shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+    hip = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
+    knee = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
+    elbow = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
+    wrist = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
+
+    # Compute distances and elbow angle
+    shoulder_hip_dist = math.dist([shoulder.x, shoulder.y], [hip.x, hip.y])
+    hip_knee_dist = math.dist([hip.x, hip.y], [knee.x, knee.y])
+    elbow_angle = calculate_angle(shoulder, elbow, wrist)
+
+    # Include elbow angle if the classifier was trained with it
+    features = np.array([shoulder_hip_dist, hip_knee_dist, elbow_angle]).reshape(1, -1)
+
+    return clf.predict(features)[0]
+
 
 
 def run_pushup_counter(video_path='webcam'):
