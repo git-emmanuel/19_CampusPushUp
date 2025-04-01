@@ -51,30 +51,7 @@ def calculate_angle(a, b, c):
 
     angle = math.degrees(math.acos(dot_product / (magnitude_ba * magnitude_bc)))
     return angle
-
-
-
-def detect_pushup(pose_landmarks):
-    """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
-    global pushup_count, direction, sparkle_frames  # Add sparkle_frames to global variables
-
-    shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
-    elbow = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
-    wrist = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
-    elbow_angle = calculate_angle(shoulder, elbow, wrist)
-
-    # Going down when elbow angle is decreasing
-    if elbow_angle < 120 and direction != "down":
-        direction = "down"
-
-    # Going up when elbow angle goes back above ~160°
-    elif elbow_angle > 140 and direction == "down":
-        direction = "up"
-        pushup_count += 1
-        sparkle_frames = 10  # Trigger sparkles for next 10 frames
-        play_sound()
     
-
 
 def detect_pushup(pose_landmarks):
     """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
