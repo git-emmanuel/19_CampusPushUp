@@ -3,6 +3,7 @@ import mediapipe as mp
 import pygame
 import math
 import sys
+import time
 
 # Initialize pygame mixer for sound
 pygame.mixer.init()
@@ -18,7 +19,10 @@ mp_pose = mp.solutions.pose
 drawing_utils = mp.solutions.drawing_utils
 
 pushup_count = 0
-direction = None  # "down" or "up"
+pushup_count_left = 0
+pushup_count_right = 0
+direction_left = None  # "down" or "up" for left arm
+direction_right = None  # "down" or "up" for right arm
 
 def calculate_angle(a, b, c):
     """Calculate the angle between three points: a (shoulder), b (elbow), and c (wrist)."""
@@ -37,58 +41,108 @@ def calculate_angle(a, b, c):
 
 def detect_pushup(pose_landmarks):
     """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
-    global pushup_count, direction
+    global pushup_count, pushup_count_left, pushup_count_right, direction_left, direction_right
 
-    shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
-    elbow = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
-    wrist = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
+    # Left arm
+    shoulder_left = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+    elbow_left = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
+    wrist_left = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
+    elbow_angle_left = calculate_angle(shoulder_left, elbow_left, wrist_left)
 
-    elbow_angle = calculate_angle(shoulder, elbow, wrist)
+    # Right arm
+    shoulder_right = pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+    elbow_right = pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_ELBOW]
+    wrist_right = pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
+    elbow_angle_right = calculate_angle(shoulder_right, elbow_right, wrist_right)
+
 
     # Going down when elbow angle is decreasing
-    if elbow_angle < 100 and direction != "down":
-        direction = "down"
-    
+    if elbow_angle_left < 100 and direction_left != "down":
+        direction_left = "down"
+
+    if elbow_angle_right < 100 and direction_right != "down":
+        direction_right = "down"
+
+    # Initialize the flag and time
+    pushup_detected_left=pushup_detected_right=False
+    current_time_left=current_time_right=time.time()
+
     # Going up when elbow angle goes back above ~160°
-    elif elbow_angle > 160 and direction == "down":
-        direction = "up"
+    if elbow_angle_left > 160 and direction_left == "down":
+        direction_left = "up"
+        pushup_count_left += 1
+        current_time_left=time.time()
+        pushup_detected_left = True
+
+    if elbow_angle_right > 160 and direction_right == "down":
+        direction_right = "up"
+        pushup_count_right += 1
+        current_time_right=time.time()
+        pushup_detected_right = True
+
+    if (pushup_detected_left or pushup_detected_right) and abs(current_time_left-current_time_right)>0.5:
         pushup_count += 1
         play_sound()
 
+    if (pushup_detected_left and pushup_detected_right) and abs(current_time_left-current_time_right)<0.5:
+        pushup_count += 1
+        play_sound()
+
+
 def draw_pose_results(image, results):
     """Draw elbow, wrist, and shoulder landmarks with lines between them and display the push-up count."""
-    global pushup_count
+    global pushup_count, pushup_count_left,pushup_count_right
     
     if results.pose_landmarks:
         detect_pushup(results.pose_landmarks)
         
-        # Get landmark coordinates
-        elbow = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
-        wrist = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
-        shoulder = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+        # Get landmark coordinates for left arm
+        elbow_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
+        wrist_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
+        shoulder_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+
+        # Get landmark coordinates for right arm
+        elbow_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_ELBOW]
+        wrist_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
+        shoulder_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
         
         h, w, _ = image.shape
-        elbow_x, elbow_y = int(elbow.x * w), int(elbow.y * h)
-        wrist_x, wrist_y = int(wrist.x * w), int(wrist.y * h)
-        shoulder_x, shoulder_y = int(shoulder.x * w), int(shoulder.y * h)
         
-        # Draw points and lines
-        cv2.circle(image, (elbow_x, elbow_y), 5, (0, 0, 255), -1)  # Red (Elbow)
-        cv2.circle(image, (wrist_x, wrist_y), 5, (0, 255, 0), -1)  # Green (Wrist)
-        cv2.circle(image, (shoulder_x, shoulder_y), 5, (255, 0, 0), -1)  # Blue (Shoulder)
-        cv2.line(image, (elbow_x, elbow_y), (shoulder_x, shoulder_y), (255, 255, 0), 2)
-        cv2.line(image, (wrist_x, wrist_y), (elbow_x, elbow_y), (255, 0, 255), 2)
+        # Draw points and lines for left arm
+        elbow_left_x, elbow_left_y = int(elbow_left.x * w), int(elbow_left.y * h)
+        wrist_left_x, wrist_left_y = int(wrist_left.x * w), int(wrist_left.y * h)
+        shoulder_left_x, shoulder_left_y = int(shoulder_left.x * w), int(shoulder_left.y * h)
+        cv2.circle(image, (elbow_left_x, elbow_left_y), 5, (0, 0, 255), -1)  # Red (Elbow)
+        cv2.circle(image, (wrist_left_x, wrist_left_y), 5, (0, 255, 0), -1)  # Green (Wrist)
+        cv2.circle(image, (shoulder_left_x, shoulder_left_y), 5, (255, 0, 0), -1)  # Blue (Shoulder)
+        cv2.line(image, (elbow_left_x, elbow_left_y), (shoulder_left_x, shoulder_left_y), (255, 255, 0), 2)
+        cv2.line(image, (wrist_left_x, wrist_left_y), (elbow_left_x, elbow_left_y), (255, 0, 255), 2)
+
+        # Draw points and lines for right arm
+        elbow_right_x, elbow_right_y = int(elbow_right.x * w), int(elbow_right.y * h)
+        wrist_right_x, wrist_right_y = int(wrist_right.x * w), int(wrist_right.y * h)
+        shoulder_right_x, shoulder_right_y = int(shoulder_right.x * w), int(shoulder_right.y * h)
+        cv2.circle(image, (elbow_right_x, elbow_right_y), 5, (0, 0, 255), -1)  # Red (Elbow)
+        cv2.circle(image, (wrist_right_x, wrist_right_y), 5, (0, 255, 0), -1)  # Green (Wrist)
+        cv2.circle(image, (shoulder_right_x, shoulder_right_y), 5, (255, 0, 0), -1)  # Blue (Shoulder)
+        cv2.line(image, (elbow_right_x, elbow_right_y), (shoulder_right_x, shoulder_right_y), (255, 255, 0), 2)
+        cv2.line(image, (wrist_right_x, wrist_right_y), (elbow_right_x, elbow_right_y), (255, 0, 255), 2)
+
+        # Draw lines for shoulders
+        cv2.line(image, (shoulder_left_x, shoulder_left_y), (shoulder_right_x, shoulder_right_y), (255, 0, 255), 2)
     
     # Display push-up count and controls
     cv2.putText(image, "Press 'a' to reset count", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
     cv2.putText(image, "Press 'q' to quit", (30, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-    cv2.putText(image, f"Push-up Count: {pushup_count}", (30, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+    cv2.putText(image, f"Push-up Count Right Arm: {pushup_count_left}", (30, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+    cv2.putText(image, f"Push-up Count Left Arm: {pushup_count_right}", (30, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+    # cv2.putText(image, f"Push-up Count: {pushup_count}", (30, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
     
     return image
 
 def run_pushup_counter(video_path='webcam'):
     """Run the push-up counter using a webcam or a video file."""
-    global pushup_count
+    global pushup_count,pushup_count_left,pushup_count_right
     
     cap = cv2.VideoCapture(0) if video_path == 'webcam' else cv2.VideoCapture(video_path)
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -113,8 +167,10 @@ def run_pushup_counter(video_path='webcam'):
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
-        elif key == ord('a'):
+        elif key == ord('r'):
             pushup_count = 0
+            pushup_count_left = 0
+            pushup_count_right = 0
     
     cap.release()
     cv2.destroyAllWindows()
