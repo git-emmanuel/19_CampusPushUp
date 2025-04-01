@@ -4,9 +4,17 @@ import pygame
 import math
 import sys
 import time
+import numpy as np
 
 # Initialize pygame mixer for sound
 pygame.mixer.init()
+
+# Initialize MediaPipe Pose module
+mp_pose = mp.solutions.pose
+drawing_utils = mp.solutions.drawing_utils
+pushup_count = 0
+direction = None  # "down" or "up"
+sparkle_frames = 0  # Counter for sparkle duration
 
 def play_sound():
     """Play a sound when a push-up is detected."""
@@ -39,9 +47,10 @@ def calculate_angle(a, b, c):
     angle = math.degrees(math.acos(dot_product / (magnitude_ba * magnitude_bc)))
     return angle
 
+
 def detect_pushup(pose_landmarks):
     """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
-    global pushup_count, pushup_count_left, pushup_count_right, direction_left, direction_right
+    global pushup_count, pushup_count_left, pushup_count_right, direction_left, direction_right, sparkle_frames
 
     # Left arm
     shoulder_left = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
@@ -88,10 +97,51 @@ def detect_pushup(pose_landmarks):
         pushup_count += 1
         play_sound()
 
+    
+
+
+def overlay_image(background, overlay, x, y, scale=0.25):
+    """Overlay an image onto another at a specified position with scaling."""
+    h, w, _ = background.shape
+    overlay = cv2.resize(overlay, (int(overlay.shape[1] * scale), int(overlay.shape[0] * scale)))
+    oh, ow, _ = overlay.shape
+    x, y = w - ow - 20, 20  # Position at the top right
+    
+    if overlay.shape[2] == 4:  # Handle transparency
+        alpha_channel = overlay[:, :, 3] / 255.0
+        for c in range(3):
+            background[y:y+oh, x:x+ow, c] = (1 - alpha_channel) * background[y:y+oh, x:x+ow, c] + alpha_channel * overlay[:, :, c]
+    else:
+        background[y:y+oh, x:x+ow] = overlay
+    return background
+
+
+def draw_sparkles(image):
+    """Draw sparkles at random positions on the image."""
+    h, w, _ = image.shape
+    for _ in range(50):  # More sparkles
+        x, y = np.random.randint(0, w), np.random.randint(0, h)
+        cv2.circle(image, (x, y), 4, (255, 255, 255), -1)  # White small dots
+        x, y = np.random.randint(0, w), np.random.randint(0, h)
+        color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))  # Slightly yellowish-white
+        cv2.circle(image, (x, y), np.random.randint(3, 6), color, -1)
+    return image
+
+
+def draw_text_with_background(image, text, position):
+    """Draw black text on a white background strip."""
+    font = cv2.FONT_HERSHEY_DUPLEX
+    font_scale = 0.7
+    font_thickness = 1
+    text_size = cv2.getTextSize(text, font, font_scale, font_thickness)[0]
+    x, y = position
+    cv2.rectangle(image, (x - 5, y - text_size[1] - 5), (x + text_size[0] + 5, y + 5), (255, 255, 255), -1)
+    cv2.putText(image, text, (x, y), font, font_scale, (0, 0, 0), font_thickness)
+
 
 def draw_pose_results(image, results):
     """Draw elbow, wrist, and shoulder landmarks with lines between them and display the push-up count."""
-    global pushup_count, pushup_count_left,pushup_count_right
+    global pushup_count, pushup_count_left,pushup_count_right, sparkle_frames
     
     if results.pose_landmarks:
         detect_pushup(results.pose_landmarks)
@@ -130,15 +180,25 @@ def draw_pose_results(image, results):
 
         # Draw lines for shoulders
         cv2.line(image, (shoulder_left_x, shoulder_left_y), (shoulder_right_x, shoulder_right_y), (255, 0, 255), 2)
+
+    # Display push-up count and controls with black text on a white stripe
+    draw_text_with_background(image, "Press 'a' to reset count", (30, 30))
+    draw_text_with_background(image, "Press 'q' to quit", (30, 60))
+    draw_text_with_background(image, f"Push-up Count Right Arm: {pushup_count_left}", (30, 90))
+    draw_text_with_background(image, f"Push-up Count Left Arm: {pushup_count_right}", (30, 120))
     
-    # Display push-up count and controls
-    cv2.putText(image, "Press 'a' to reset count", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-    cv2.putText(image, "Press 'q' to quit", (30, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-    cv2.putText(image, f"Push-up Count Right Arm: {pushup_count_left}", (30, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-    cv2.putText(image, f"Push-up Count Left Arm: {pushup_count_right}", (30, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-    # cv2.putText(image, f"Push-up Count: {pushup_count}", (30, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-    
+    # Add logo to the image at the top right corner
+    logo = cv2.imread("logo.png", cv2.IMREAD_UNCHANGED)
+    if logo is not None:
+        image = overlay_image(image, logo, 10, 10)
+
+    # Show sparkles only for 10 frames after a push-up is detected
+    if sparkle_frames > 0:
+        image = draw_sparkles(image)
+        sparkle_frames -= 1  # Decrease count each frame
+
     return image
+
 
 def run_pushup_counter(video_path='webcam'):
     """Run the push-up counter using a webcam or a video file."""
@@ -174,6 +234,7 @@ def run_pushup_counter(video_path='webcam'):
     
     cap.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     """Entry point: Accept a video path argument from the command line."""
