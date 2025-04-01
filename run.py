@@ -14,28 +14,21 @@ pygame.mixer.init()
 # Initialize MediaPipe Pose module
 mp_pose = mp.solutions.pose
 drawing_utils = mp.solutions.drawing_utils
-pushup_count = 0
+pushup_count = 0 # Init pushup_count
+previous_position_label = None # Init position_label
 direction = None  # "down" or "up"
 sparkle_frames = 0  # Counter for sparkle duration
 
 # Use Model in Real-Time Detection
-clf = joblib.load("classifier.pkl") #! the trained model
+clf = joblib.load("./models/push-up_classifier.pkl") #! the trained model
+
 
 def play_sound():
     """Play a sound when a push-up is detected."""
     pygame.mixer.init()  # Initialize the mixer
-    pygame.mixer.music.load("drum.wav")  # Ensure this file is in the same directory or provide full path
+    pygame.mixer.music.load("./media/drum.wav")  # Ensure this file is in the same directory or provide full path
     pygame.mixer.music.play()
 
-# Initialize MediaPipe Pose module
-mp_pose = mp.solutions.pose
-drawing_utils = mp.solutions.drawing_utils
-
-pushup_count = 0
-pushup_count_left = 0
-pushup_count_right = 0
-direction_left = None  # "down" or "up" for left arm
-direction_right = None  # "down" or "up" for right arm
 
 def calculate_angle(a, b, c):
     """Calculate the angle between three points: a (shoulder), b (elbow), and c (wrist)."""
@@ -51,45 +44,6 @@ def calculate_angle(a, b, c):
 
     angle = math.degrees(math.acos(dot_product / (magnitude_ba * magnitude_bc)))
     return angle
-    
-
-def detect_pushup(pose_landmarks):
-    """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
-    global pushup_count, pushup_count_left, pushup_count_right, direction_left, direction_right, sparkle_frames
-
-    # Left arm
-    shoulder_left = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
-    elbow_left = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
-    wrist_left = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
-    elbow_angle_left = calculate_angle(shoulder_left, elbow_left, wrist_left)
-
-    # Right arm
-    shoulder_right = pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
-    elbow_right = pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_ELBOW]
-    wrist_right = pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
-    elbow_angle_right = calculate_angle(shoulder_right, elbow_right, wrist_right)
-
-
-    # Going down when elbow angle is decreasing
-    if elbow_angle_left < 100 and direction_left != "down":
-        direction_left = "down"
-
-    if elbow_angle_right < 100 and direction_right != "down":
-        direction_right = "down"
-
-    # Going up when elbow angle goes back above ~160°
-    if elbow_angle_left > 160 and direction_left == "down":
-        direction_left = "up"
-        pushup_count_left += 1
-        sparkle_frames = 10  # Trigger sparkles for next 10 frames
-        play_sound()
-
-
-    if elbow_angle_right > 160 and direction_right == "down":
-        direction_right = "up"
-        pushup_count_right += 1
-        sparkle_frames = 10  # Trigger sparkles for next 10 frames
-        play_sound()
 
 
 def overlay_image(background, overlay, x, y, scale=0.25):
@@ -133,11 +87,10 @@ def draw_text_with_background(image, text, position):
 
 def draw_pose_results(image, results):
     """Draw elbow, wrist, and shoulder landmarks with lines between them and display the push-up count."""
-    global pushup_count, pushup_count_left,pushup_count_right, sparkle_frames
+    global pushup_count, pushup_count_left,pushup_count_right, sparkle_frames, previous_position_label
     
     if results.pose_landmarks:
-        detect_pushup(results.pose_landmarks)
-        
+    
         # Get landmark coordinates for left arm
         elbow_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
         wrist_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
@@ -173,17 +126,27 @@ def draw_pose_results(image, results):
         # Draw lines for shoulders
         cv2.line(image, (shoulder_left_x, shoulder_left_y), (shoulder_right_x, shoulder_right_y), (255, 0, 255), 2)
 
+
+    # Predict position 
+    position_label = classify_position(results.pose_landmarks)
+
+    # Update counter
+    if position_label=='position_up' and position_label!=previous_position_label and previous_position_label!=None:
+        pushup_count +=1
+        sparkle_frames = 10  # Trigger sparkles for next 10 frames
+        play_sound()
+
+    previous_position_label=position_label
+
     # Display push-up count and controls with black text on a white stripe
     draw_text_with_background(image, "Press 'r' to reset count", (30, 30))
     draw_text_with_background(image, "Press 'q' to quit", (30, 60))
-    draw_text_with_background(image, f"Push-up Count Right Arm: {pushup_count_left}", (30, 90))
-    draw_text_with_background(image, f"Push-up Count Left Arm: {pushup_count_right}", (30, 120))
-    
-    position_label = classify_position(results.pose_landmarks)
-    draw_text_with_background(image, f"AI classification: {position_label}", (30, 150))
+    draw_text_with_background(image, f"Push-up Count: {pushup_count}", (30, 90))
+    draw_text_with_background(image, f"AI classification: {position_label}", (30, 120))
+
     
     # Add logo to the image at the top right corner
-    logo = cv2.imread("logo.png", cv2.IMREAD_UNCHANGED)
+    logo = cv2.imread("./media/logo.png", cv2.IMREAD_UNCHANGED)
     if logo is not None:
         image = overlay_image(image, logo, 10, 10)
 
@@ -254,7 +217,6 @@ def run_pushup_counter(video_path='webcam'):
     
     cap.release()
     cv2.destroyAllWindows()
-
 
 if __name__ == "__main__":
     """Entry point: Accept a video path argument from the command line."""
