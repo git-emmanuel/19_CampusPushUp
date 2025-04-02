@@ -8,6 +8,8 @@ import os
 import math
 import datetime
 import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+import joblib
 
 
 class MediaPipe:
@@ -169,3 +171,29 @@ class Embeddings:
         # Add full results in embeddings dataset
         embeddings=pd.read_csv(os.path.join(self.output_folder,embeddings_filename))
         return embeddings
+    
+
+    
+class Classifier:
+    def __init__(self,output_folder='./models'):
+        self.output_folder=output_folder
+        
+    def fit_and_save_model(self,model,embeddings_filename):
+
+        embeddings=pd.read_csv(embeddings_filename)
+
+        # Split X,y
+        X = embeddings.drop(columns=['label'])  # Features: distances
+        y = embeddings['label']  # Target: position labels
+
+        # Train classifier
+        model.fit(X, y)
+
+        # Define model classifier name
+        classifier_filename = embeddings_filename.split('embeddings/')[1].replace('embeddings.csv',f'{model.__class__.__name__}.pkl')
+
+        # Save model
+        joblib.dump(model,os.path.join(self.output_folder,classifier_filename))
+
+        return model
+
