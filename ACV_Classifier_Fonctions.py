@@ -6,6 +6,7 @@ import csv
 import numpy as np
 import os
 import math
+import datetime
 
 
 class MediaPipe:
@@ -85,3 +86,87 @@ class MediaPipe:
         return np.degrees(np.arccos(np.clip(cosine_angle, -1.0, 1.0)))
 
 
+class Embeddings:
+    def __init__(self,size=20,output_folder="./embeddings"):
+        self.size=size
+        self.output_folder=output_folder
+
+        
+        self.mediapipe=MediaPipe()
+
+    def generate_embeddings(self,base_folder,features,embeddings_filename,show_images=True,date_generation=False):
+
+        # Créer le dossier s'il n'existe pas
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
+
+        if date_generation:
+            # Obtenir la date et l'heure actuelles
+            now = datetime.datetime.now()
+            timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+            # Nom du fichier avec la date et l'heure
+            embeddings_filename = f"{embeddings_filename}_embeddings_{timestamp}.csv"
+        else:
+            embeddings_filename = f"{embeddings_filename}_embeddings.csv"
+        
+        # Create CSV file and write headers"
+        with open(os.path.join(self.output_folder,embeddings_filename), "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(features)
+            
+            self.embeddings={}
+            count_processed=0
+            count_not_processed=0
+
+            for label in os.listdir(base_folder):
+                label_folder = os.path.join(base_folder, label)
+                if not os.path.isdir(label_folder):
+                    continue
+
+                for image_name in os.listdir(label_folder):
+                    image_path = os.path.join(label_folder, image_name)
+                        
+                    image = cv2.imread(image_path)
+
+                    try:
+                        # Convert images to RGB
+                        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                        # Show image processed
+                        if show_images:
+                            cv2.imshow("Pose Capture", image)
+                            if cv2.waitKey(500) & 0xFF == ord('q'):
+                                break
+
+                        # Get distances and angles from mediapipe
+                        image_data=self.mediapipe.get_distances_and_angles(image_rgb)
+
+                        # Add full results in embeddings dataset
+                        self.embeddings[f'{label}_{image_name}']=image_data
+                        
+                        # Generate embedding data
+                        csv_data=[]
+                        for feature in features:
+                            try:
+                                csv_data.append(image_data[feature])
+                            except:
+                                None
+                        csv_data.append(label)
+                            
+                        # Save embeddings to CSV
+                        writer.writerow(csv_data)
+                        # print(f"Image processed : {image_name}")
+
+                        count_processed +=1
+                        
+                    except:
+                        count_not_processed +=1
+                        # print(f"Image not processed (no images or error) : {image_name}")
+                
+        cv2.destroyAllWindows()
+        
+        print(f"Images processed : {count_processed}")
+        print(f"Images not processed : {count_not_processed}")
+
+        return self.embeddings
