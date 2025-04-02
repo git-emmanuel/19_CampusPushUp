@@ -134,7 +134,7 @@ def draw_pose_results(image, results):
     if position_label=='position_up' and position_label!=previous_position_label and previous_position_label!=None:
         pushup_count +=1
         sparkle_frames = 10  # Trigger sparkles for next 10 frames
-        play_sound()
+        # play_sound()
     previous_position_label=position_label
 
     # Display push-up count and controls with black text on a white stripe
