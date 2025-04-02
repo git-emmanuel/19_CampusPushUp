@@ -90,18 +90,16 @@ class MediaPipe:
 
 
 class Embeddings:
-    def __init__(self,size=20,output_folder="./embeddings"):
+    def __init__(self,size=20,embeddings_folder="./embeddings"):
         self.size=size
-        self.output_folder=output_folder
-
-        
+        self.embeddings_folder=embeddings_folder
         self.mediapipe=MediaPipe()
 
     def generate_embeddings(self,base_folder,features,embeddings_filename,show_images=True,date_generation=False):
 
         # Créer le dossier s'il n'existe pas
-        if not os.path.exists(self.output_folder):
-            os.makedirs(self.output_folder)
+        if not os.path.exists(self.embeddings_folder):
+            os.makedirs(self.embeddings_folder)
 
         if date_generation:
             # Obtenir la date et l'heure actuelles
@@ -113,13 +111,15 @@ class Embeddings:
         else:
             embeddings_filename = f"{embeddings_filename}_embeddings.csv"
         
+        embeddings_pathfile=os.path.join(self.embeddings_folder,embeddings_filename)
+
         # Create CSV file and write headers"
-        with open(os.path.join(self.output_folder,embeddings_filename), "w", newline="") as file:
+        with open(embeddings_pathfile, "w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(features)
             
             count_processed=0
-            count_not_processed=0
+            count_skipped=0
 
             for label in os.listdir(base_folder):
                 label_folder = os.path.join(base_folder, label)
@@ -160,27 +160,27 @@ class Embeddings:
                         count_processed +=1
                         
                     except:
-                        count_not_processed +=1
+                        count_skipped +=1
                         # print(f"Image not processed (no images or error) : {image_name}")
                 
         cv2.destroyAllWindows()
         
         print(f"Images processed : {count_processed}")
-        print(f"Images not processed : {count_not_processed}")
+        print(f"Images skipped : {count_skipped}")
+        print(f'CSV file generated at :{embeddings_pathfile}')
 
         # Add full results in embeddings dataset
-        embeddings=pd.read_csv(os.path.join(self.output_folder,embeddings_filename))
+        embeddings=pd.read_csv(embeddings_pathfile)
         return embeddings
-    
 
-    
 class Classifier:
-    def __init__(self,output_folder='./models'):
-        self.output_folder=output_folder
+    def __init__(self,embedding_folders='./embeddings',models_folder='./models'):
+        self.embedding_folders=embedding_folders
+        self.models_folder=models_folder
         
     def fit_and_save_model(self,model,embeddings_filename):
 
-        embeddings=pd.read_csv(embeddings_filename)
+        embeddings=pd.read_csv(os.path.join(self.embedding_folders,embeddings_filename))
 
         # Split X,y
         X = embeddings.drop(columns=['label'])  # Features: distances
@@ -190,10 +190,40 @@ class Classifier:
         model.fit(X, y)
 
         # Define model classifier name
-        classifier_filename = embeddings_filename.split('embeddings/')[1].replace('embeddings.csv',f'{model.__class__.__name__}.pkl')
+        model_filename = embeddings_filename.replace('embeddings.csv',f'{model.__class__.__name__}.pkl')
 
         # Save model
-        joblib.dump(model,os.path.join(self.output_folder,classifier_filename))
+        joblib.dump(model,os.path.join(self.models_folder,model_filename))
 
         return model
+
+class Predict:
+    def __init__(self,model_filename,models_folder='./models'):
+
+        # Load a trained model
+        self.model= joblib.load(os.path.join(models_folder,model_filename)) 
+
+        # Start mediapipe instance
+        self.mp=MediaPipe()
+    
+    def predict(self,image_path):
+
+        # Load image
+        image = cv2.imread(image_path)
+
+        # Convert images to RGB
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Get distances and angles from mediapipe
+        image_data=self.mp.get_distances_and_angles(image_rgb)
+
+        # Convert to df
+        image_data=pd.DataFrame(image_data,index=['value'])
+
+        # Filter by model features
+        image_data=image_data.loc[:,self.model.feature_names_in_]
+
+        # Predict based on image_data
+        return self.model.predict(image_data)
+
 

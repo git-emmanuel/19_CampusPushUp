@@ -118,7 +118,7 @@ def draw_pose_results(image, results):
         wrist_right_x, wrist_right_y = int(wrist_right.x * w), int(wrist_right.y * h)
         shoulder_right_x, shoulder_right_y = int(shoulder_right.x * w), int(shoulder_right.y * h)
         cv2.circle(image, (elbow_right_x, elbow_right_y), 5, (0, 0, 255), -1)  # Red (Elbow)
-        cv2.circle(image, (wrist_right_x, wrist_right_y), 5, (0, 255, 0), -1)  # Green (Wrist)
+        cv2.circle(image, (wrist_elbow_angle = right_x, wrist_right_y), 5, (0, 255, 0), -1)  # Green (Wrist)
         cv2.circle(image, (shoulder_right_x, shoulder_right_y), 5, (255, 0, 0), -1)  # Blue (Shoulder)
         cv2.line(image, (elbow_right_x, elbow_right_y), (shoulder_right_x, shoulder_right_y), (255, 255, 0), 2)
         cv2.line(image, (wrist_right_x, wrist_right_y), (elbow_right_x, elbow_right_y), (255, 0, 255), 2)
