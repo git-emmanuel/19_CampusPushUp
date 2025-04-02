@@ -155,7 +155,9 @@ def draw_pose_results(image, results):
         hip_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HIP]
         knee_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
         knee_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE]
-        
+        foot_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HEEL]
+        foot_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HEEL]
+
         h, w, _ = image.shape
         
         # Draw points and lines for left arm
@@ -194,6 +196,17 @@ def draw_pose_results(image, results):
         cv2.line(image, (hip_right_x, hip_right_y), (shoulder_right_x, shoulder_right_y), (255, 0, 255), 2)
         cv2.line(image, (hip_left_x, hip_left_y), (knee_left_x, knee_left_y), (255, 0, 255), 2)
         cv2.line(image, (hip_right_x, hip_right_y), (knee_right_x, knee_right_y), (255, 0, 255), 2)
+
+        # Now, add points for the feet
+        foot_left_x, foot_left_y = int(foot_left.x * w), int(foot_left.y * h)  # Left foot
+        foot_right_x, foot_right_y = int(foot_right.x * w), int(foot_right.y * h)  # Right foot
+        # Draw the feet points
+        cv2.circle(image, (foot_left_x, foot_left_y), 5, (255, 255, 0), -1)  # Cyan (Left foot)
+        cv2.circle(image, (foot_right_x, foot_right_y), 5, (255, 255, 0), -1)  # Cyan (Right foot)
+
+        # Draw lines for feet connection 
+        cv2.line(image, (knee_left_x, knee_left_y), (foot_left_x, foot_left_y), (255, 0, 0), 2)  # Left leg line
+        cv2.line(image, (knee_right_x, knee_right_y), (foot_right_x, foot_right_y), (255, 0, 0), 2)  # Right leg line
 
     # Display push-up count and controls with black text on a white stripe
     draw_text_with_background(image, "Press 'r' to reset count", (30, 30))
