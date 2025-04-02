@@ -7,6 +7,7 @@ import numpy as np
 import os
 import math
 import datetime
+import pandas as pd
 
 
 class MediaPipe:
@@ -115,7 +116,6 @@ class Embeddings:
             writer = csv.writer(file)
             writer.writerow(features)
             
-            self.embeddings={}
             count_processed=0
             count_not_processed=0
 
@@ -141,9 +141,6 @@ class Embeddings:
 
                         # Get distances and angles from mediapipe
                         image_data=self.mediapipe.get_distances_and_angles(image_rgb)
-
-                        # Add full results in embeddings dataset
-                        self.embeddings[f'{label}_{image_name}']=image_data
                         
                         # Generate embedding data
                         csv_data=[]
@@ -169,4 +166,6 @@ class Embeddings:
         print(f"Images processed : {count_processed}")
         print(f"Images not processed : {count_not_processed}")
 
-        return self.embeddings
+        # Add full results in embeddings dataset
+        embeddings=pd.read_csv(os.path.join(self.output_folder,embeddings_filename))
+        return embeddings
