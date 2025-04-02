@@ -246,14 +246,16 @@ def classify_position(pose_landmarks):
     wrist = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
     foot = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HEEL]
 
-    # Compute distances and elbow angle
+    # Calculate distances using math.dist (for simplicity, we stick to math.dist)
     shoulder_hip_dist = math.dist([shoulder.x, shoulder.y], [hip.x, hip.y])
     hip_knee_dist = math.dist([hip.x, hip.y], [knee.x, knee.y])
     knee_foot_dist = math.dist([knee.x, knee.y], [foot.x, foot.y])
+
+    # Calculate angles using the calculate_angle function
     elbow_angle = calculate_angle(shoulder, elbow, wrist)
     shoulder_foot_dist = np.linalg.norm([shoulder.x - foot.x, shoulder.y - foot.y])
     hip_angle = calculate_angle(shoulder, hip, knee)
-    knee_angle = calculate_angle(hip, knee, foot)
+    knee_angle = calculate_angle(hip, knee, foot)  
 
     if mode == 'push-up':
         feature_names = ["shoulder_hip_dist", "hip_knee_dist", "elbow_angle"]
