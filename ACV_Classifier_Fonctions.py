@@ -38,18 +38,39 @@ class MediaPipe:
             self.positions={}
 
             # Positions pour le côté gauche
+            self.positions['nose'] = landmarks[poselandmark.NOSE]
+            self.positions['left_eye_inner'] = landmarks[poselandmark.LEFT_EYE_INNER]
+            self.positions['left_eye'] = landmarks[poselandmark.LEFT_EYE]
+            self.positions['left_eye_outer'] = landmarks[poselandmark.LEFT_EYE_OUTER]
+            self.positions['right_eye_inner'] = landmarks[poselandmark.RIGHT_EYE_INNER]
+            self.positions['right_eye'] = landmarks[poselandmark.RIGHT_EYE]
+            self.positions['right_eye_outer'] = landmarks[poselandmark.RIGHT_EYE_OUTER]
+            self.positions['left_ear'] = landmarks[poselandmark.LEFT_EAR]
+            self.positions['right_ear'] = landmarks[poselandmark.RIGHT_EAR]
+            self.positions['mouth_left'] = landmarks[poselandmark.MOUTH_LEFT]
+            self.positions['mouth_right'] = landmarks[poselandmark.MOUTH_RIGHT]
             self.positions['left_shoulder'] = landmarks[poselandmark.LEFT_SHOULDER]
-            self.positions['left_hip'] = landmarks[poselandmark.LEFT_HIP]
-            self.positions['left_knee'] = landmarks[poselandmark.LEFT_KNEE]
-            self.positions['left_elbow'] = landmarks[poselandmark.LEFT_ELBOW]
-            self.positions['left_wrist'] = landmarks[poselandmark.LEFT_WRIST]
-
-            # Positions pour le côté droit
             self.positions['right_shoulder'] = landmarks[poselandmark.RIGHT_SHOULDER]
-            self.positions['right_hip'] = landmarks[poselandmark.RIGHT_HIP]
-            self.positions['right_knee'] = landmarks[poselandmark.RIGHT_KNEE]
+            self.positions['left_elbow'] = landmarks[poselandmark.LEFT_ELBOW]
             self.positions['right_elbow'] = landmarks[poselandmark.RIGHT_ELBOW]
+            self.positions['left_wrist'] = landmarks[poselandmark.LEFT_WRIST]
             self.positions['right_wrist'] = landmarks[poselandmark.RIGHT_WRIST]
+            self.positions['left_pinky'] = landmarks[poselandmark.LEFT_PINKY]
+            self.positions['right_pinky'] = landmarks[poselandmark.RIGHT_PINKY]
+            self.positions['left_index'] = landmarks[poselandmark.LEFT_INDEX]
+            self.positions['right_index'] = landmarks[poselandmark.RIGHT_INDEX]
+            self.positions['left_thumb'] = landmarks[poselandmark.LEFT_THUMB]
+            self.positions['right_thumb'] = landmarks[poselandmark.RIGHT_THUMB]
+            self.positions['left_hip'] = landmarks[poselandmark.LEFT_HIP]
+            self.positions['right_hip'] = landmarks[poselandmark.RIGHT_HIP]
+            self.positions['left_knee'] = landmarks[poselandmark.LEFT_KNEE]
+            self.positions['right_knee'] = landmarks[poselandmark.RIGHT_KNEE]
+            self.positions['left_ankle'] = landmarks[poselandmark.LEFT_ANKLE]
+            self.positions['right_ankle'] = landmarks[poselandmark.RIGHT_ANKLE]
+            self.positions['left_heel'] = landmarks[poselandmark.LEFT_HEEL]
+            self.positions['right_heel'] = landmarks[poselandmark.RIGHT_HEEL]
+            self.positions['left_foot_index'] = landmarks[poselandmark.LEFT_FOOT_INDEX]
+            self.positions['right_foot_index'] = landmarks[poselandmark.RIGHT_FOOT_INDEX]
             
             return self.positions
         
@@ -64,15 +85,66 @@ class MediaPipe:
             # Get key landmarks
             self.distances_and_angles={}
 
-            # Calculs pour le côté gauche
-            self.distances_and_angles['left_shoulder_hip_dist'] = self.calculate_distance(self.positions['left_shoulder'], self.positions['left_hip'])
-            self.distances_and_angles['left_hip_knee_dist'] = self.calculate_distance(self.positions['left_hip'], self.positions['left_knee'])
-            self.distances_and_angles['left_elbow_angle'] = self.calculate_angle(self.positions['left_shoulder'], self.positions['left_elbow'], self.positions['left_wrist'])
+            # Distances entre le poignet et l'épaule
+            self.distances_and_angles['left_wrist_to_left_shoulder_dist'] = self.calculate_distance(self.positions['left_wrist'], self.positions['left_shoulder'])
+            self.distances_and_angles['right_wrist_to_right_shoulder_dist'] = self.calculate_distance(self.positions['right_wrist'], self.positions['right_shoulder'])
 
-            # Calculs pour le côté droit
-            self.distances_and_angles['right_shoulder_hip_dist'] = self.calculate_distance(self.positions['right_shoulder'], self.positions['right_hip'])
-            self.distances_and_angles['right_hip_knee_dist'] = self.calculate_distance(self.positions['right_hip'], self.positions['right_knee'])
-            self.distances_and_angles['right_elbow_angle'] = self.calculate_angle(self.positions['right_shoulder'], self.positions['right_elbow'], self.positions['right_wrist'])
+            # Distances entre le poignet et la hanche
+            self.distances_and_angles['left_wrist_to_left_hip_dist'] = self.calculate_distance(self.positions['left_wrist'], self.positions['left_hip'])
+            self.distances_and_angles['right_wrist_to_right_hip_dist'] = self.calculate_distance(self.positions['right_wrist'], self.positions['right_hip'])
+
+            # Distances entre le pied et la hanche
+            self.distances_and_angles['left_foot_to_left_hip_dist'] = self.calculate_distance(self.positions['left_foot_index'], self.positions['left_hip'])
+            self.distances_and_angles['right_foot_to_right_hip_dist'] = self.calculate_distance(self.positions['right_foot_index'], self.positions['right_hip'])
+
+            # Distances entre le pied et l'épaule
+            self.distances_and_angles['left_foot_to_left_shoulder_dist'] = self.calculate_distance(self.positions['left_foot_index'], self.positions['left_shoulder'])
+            self.distances_and_angles['right_foot_to_right_shoulder_dist'] = self.calculate_distance(self.positions['right_foot_index'], self.positions['right_shoulder'])
+
+            # Distances entre le pied et le poignet
+            self.distances_and_angles['left_foot_to_left_wrist_dist'] = self.calculate_distance(self.positions['left_foot_index'], self.positions['left_wrist'])
+            self.distances_and_angles['right_foot_to_right_wrist_dist'] = self.calculate_distance(self.positions['right_foot_index'], self.positions['right_wrist'])
+
+            # Distances entre les poignets
+            self.distances_and_angles['left_wrist_to_right_wrist_dist'] = self.calculate_distance(self.positions['left_wrist'], self.positions['right_wrist'])
+
+            # Distances entre les coudes
+            self.distances_and_angles['left_elbow_to_right_elbow_dist'] = self.calculate_distance(self.positions['left_elbow'], self.positions['right_elbow'])
+
+            # Distances entre les genoux
+            self.distances_and_angles['left_knee_to_right_knee_dist'] = self.calculate_distance(self.positions['left_knee'], self.positions['right_knee'])
+
+            # Distances entre les pieds
+            self.distances_and_angles['left_foot_to_right_foot_dist'] = self.calculate_distance(self.positions['left_foot_index'], self.positions['right_foot_index'])
+
+            # Distances entre le nez et le poignet
+            self.distances_and_angles['nose_left_to_wrist_dist'] = self.calculate_distance(self.positions['nose'], self.positions['left_wrist'])
+            self.distances_and_angles['nose_right_to_wrist_dist'] = self.calculate_distance(self.positions['nose'], self.positions['right_wrist'])
+
+            # Distances entre le nez et le pied
+            self.distances_and_angles['nose_left_to_foot_dist'] = self.calculate_distance(self.positions['nose'], self.positions['left_foot_index'])
+            self.distances_and_angles['nose_right_to_foot_dist'] = self.calculate_distance(self.positions['nose'], self.positions['right_foot_index'])
+
+            # Distances entre le nez et l'épaule
+            self.distances_and_angles['nose_left_to_shoulder_dist'] = self.calculate_distance(self.positions['nose'], self.positions['left_shoulder'])
+            self.distances_and_angles['nose_right_to_shoulder_dist'] = self.calculate_distance(self.positions['nose'], self.positions['right_shoulder'])
+
+            # Angles pied-genou-hanche
+            self.distances_and_angles['left_foot_knee_hip_angle'] = self.calculate_angle(self.positions['left_foot_index'], self.positions['left_knee'], self.positions['left_hip'])
+            self.distances_and_angles['right_foot_knee_hip_angle'] = self.calculate_angle(self.positions['right_foot_index'], self.positions['right_knee'], self.positions['right_hip'])
+
+            # Angles épaule-hanche-genou
+            self.distances_and_angles['left_shoulder_hip_knee_angle'] = self.calculate_angle(self.positions['left_shoulder'], self.positions['left_hip'], self.positions['left_knee'])
+            self.distances_and_angles['right_shoulder_hip_knee_angle'] = self.calculate_angle(self.positions['right_shoulder'], self.positions['right_hip'], self.positions['right_knee'])
+
+            # Angles coude-épaule-hanche
+            self.distances_and_angles['left_elbow_shoulder_hip_angle'] = self.calculate_angle(self.positions['left_elbow'], self.positions['left_shoulder'], self.positions['left_hip'])
+            self.distances_and_angles['right_elbow_shoulder_hip_angle'] = self.calculate_angle(self.positions['right_elbow'], self.positions['right_shoulder'], self.positions['right_hip'])
+
+            # Angles épaule-coude-poignet
+            self.distances_and_angles['left_shoulder_elbow_wrist_angle'] = self.calculate_angle(self.positions['left_shoulder'], self.positions['left_elbow'], self.positions['left_wrist'])
+            self.distances_and_angles['right_shoulder_elbow_wrist_angle'] = self.calculate_angle(self.positions['right_shoulder'], self.positions['right_elbow'], self.positions['right_wrist'])
+
             return self.distances_and_angles
         
         except:
@@ -116,12 +188,19 @@ class Embeddings:
 
         # Set defaut features
         if features==None:
-            
             ref_image = cv2.imread('./training_datasets/ref_image.jpg') # Load image
             ref_image = cv2.cvtColor(ref_image, cv2.COLOR_BGR2RGB) # Convert to RGB
             ref_image=self.mediapipe.get_distances_and_angles(ref_image) # Get distance and angles
             features=list(ref_image.keys()) # Gets keys and add to list
-            features.append('label') # 
+            features.append('label') #
+            features_list_pathfile=os.path.join(self.embeddings_folder,'features_list.csv')
+            with open(features_list_pathfile, "w", newline="") as file:
+                writer = csv.writer(file)
+                for key in features:
+                    writer.writerow([key])
+
+        if not 'label' in features:
+            features.append('label')
 
         # Create CSV file and write headers"
         with open(embeddings_pathfile, "w", newline="") as file:
@@ -228,24 +307,38 @@ class Predict:
         # Start mediapipe instance
         self.mp=MediaPipe()
     
-    def predict(self,image_path):
+    def predict(self,image_path,min_predictions=3):
 
-        # Load image
-        image = cv2.imread(image_path)
+        i=0
+        predictions=[]
+        while i<min_predictions:
+            i+=1
 
-        # Convert images to RGB
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # Load image
+            image = cv2.imread(image_path)
 
-        # Get distances and angles from mediapipe
-        image_data=self.mp.get_distances_and_angles(image_rgb)
+            # Convert images to RGB
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Convert to df
-        image_data=pd.DataFrame(image_data,index=['value'])
+            # Get distances and angles from mediapipe
+            image_data=self.mp.get_distances_and_angles(image_rgb)
 
-        # Filter by model features
-        image_data=image_data.loc[:,self.model.feature_names_in_]
+            # Convert to df
+            image_data=pd.DataFrame(image_data,index=['value'])
 
-        # Predict based on image_data
-        return self.model.predict(image_data)
+            # Filter by model features
+            image_data=image_data.loc[:,self.model.feature_names_in_]
+
+            # Predict based on image_data
+            predictions.append(self.model.predict(image_data)[0])
+
+        print(predictions)
+        # Trouver l'élément le plus présent
+        most_frequent_prediction = max(set(predictions), key=predictions.count)
+
+        return most_frequent_prediction
+
+    
+
 
 
