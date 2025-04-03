@@ -346,33 +346,33 @@ class Predict:
         return image_rgb
     
     def predict(self,image):
-        # Get distances and angles from mediapipe
-        image_data=self.mp.get_distances_and_angles(image)
+        try :
+            # Get distances and angles from mediapipe
+            image_data=self.mp.get_distances_and_angles(image)
 
-        # Convert to df
-        image_data=pd.DataFrame(image_data,index=['value'])
+            # Convert to df
+            image_data=pd.DataFrame(image_data,index=['value'])
 
-        # Filter by model features
-        image_data=image_data.loc[:,self.model.feature_names_in_]
-    
-        # Predict based on image_data
-        return self.model.predict(image_data)[0]
-
-    
-    def load_image_and_predict(self,image_path,min_predictions=1):
+            # Filter by model features
+            image_data=image_data.loc[:,self.model.feature_names_in_]
         
+            # Predict based on image_data
+            return self.model.predict(image_data)[0]
+        except : 
+            return None
+
+    
+    def mean_predict(self,image,min_predictions=1):
+
         i=0
         predictions=[]
         while i<min_predictions:
             i+=1
-        
-        image=self.load_images(image_path)
-        prediction=self.predict(image)
-        
-        # Predict based on image_data
-        predictions.append(prediction)
+            prediction=self.predict(image)
+            # Predict based on image_data
+            if prediction is not None:
+                predictions.append(prediction)
 
-        # print(predictions)
         # Trouver l'élément le plus présent
         most_frequent_prediction = max(set(predictions), key=predictions.count)
 
