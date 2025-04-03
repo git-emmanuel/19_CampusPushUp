@@ -10,6 +10,7 @@ import datetime
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 import joblib
+import kagglehub
 
 
 class MediaPipe:
@@ -95,7 +96,7 @@ class Embeddings:
         self.embeddings_folder=embeddings_folder
         self.mediapipe=MediaPipe()
 
-    def generate_embeddings(self,base_folder,features,embeddings_filename,show_images=True,date_generation=False):
+    def generate_embeddings(self,base_folder,embeddings_filename,features=None,show_images=False,date_generation=False):
 
         # Créer le dossier s'il n'existe pas
         if not os.path.exists(self.embeddings_folder):
@@ -112,6 +113,15 @@ class Embeddings:
             embeddings_filename = f"{embeddings_filename}_embeddings.csv"
         
         embeddings_pathfile=os.path.join(self.embeddings_folder,embeddings_filename)
+
+        # Set defaut features
+        if features==None:
+            
+            ref_image = cv2.imread('./training_datasets/ref_image.jpg') # Load image
+            ref_image = cv2.cvtColor(ref_image, cv2.COLOR_BGR2RGB) # Convert to RGB
+            ref_image=self.mediapipe.get_distances_and_angles(ref_image) # Get distance and angles
+            features=list(ref_image.keys()) # Gets keys and add to list
+            features.append('label') # 
 
         # Create CSV file and write headers"
         with open(embeddings_pathfile, "w", newline="") as file:
@@ -138,12 +148,12 @@ class Embeddings:
                         # Show image processed
                         if show_images:
                             cv2.imshow("Pose Capture", image)
-                            if cv2.waitKey(500) & 0xFF == ord('q'):
+                            if cv2.waitKey(50) & 0xFF == ord('q'):
                                 break
 
                         # Get distances and angles from mediapipe
                         image_data=self.mediapipe.get_distances_and_angles(image_rgb)
-                        
+
                         # Generate embedding data
                         csv_data=[]
                         for feature in features:
@@ -167,11 +177,19 @@ class Embeddings:
         
         print(f"Images processed : {count_processed}")
         print(f"Images skipped : {count_skipped}")
-        print(f'CSV file generated at :{embeddings_pathfile}')
+        print(f'CSV pathfile generated :{embeddings_pathfile}')
 
         # Add full results in embeddings dataset
         embeddings=pd.read_csv(embeddings_pathfile)
         return embeddings
+    
+    def generate_embeddings_from_kaggle(self,kaggle_path,embeddings_filename,features=None,show_images=False,date_generation=False):
+
+        # Download latest version
+        base_folder = kagglehub.dataset_download(kaggle_path)
+        print("Path to dataset files:", base_folder)
+        
+        return self.generate_embeddings(base_folder,embeddings_filename,features,show_images,date_generation)
 
 class Classifier:
     def __init__(self,embedding_folders='./embeddings',models_folder='./models'):
@@ -179,6 +197,10 @@ class Classifier:
         self.models_folder=models_folder
         
     def fit_and_save_model(self,model,embeddings_filename):
+
+        # Créer le dossier s'il n'existe pas
+        if not os.path.exists(self.models_folder):
+            os.makedirs(self.models_folder)
 
         embeddings=pd.read_csv(os.path.join(self.embedding_folders,embeddings_filename))
 
