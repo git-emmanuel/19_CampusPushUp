@@ -85,6 +85,35 @@ class MediaPipe:
             # Get key landmarks
             self.distances_and_angles={}
 
+            # Distances entre les épaules et les hanches
+            self.distances_and_angles['left_shoulder_to_left_hip_dist'] = self.calculate_distance(self.positions['left_shoulder'], self.positions['left_hip'])
+            self.distances_and_angles['right_shoulder_to_right_hip_dist'] = self.calculate_distance(self.positions['right_shoulder'], self.positions['right_hip'])
+
+            # Distances entre les coudes et les épaules
+            self.distances_and_angles['left_elbow_to_left_shoulder_dist'] = self.calculate_distance(self.positions['left_elbow'], self.positions['left_shoulder'])
+            self.distances_and_angles['right_elbow_to_right_shoulder_dist'] = self.calculate_distance(self.positions['right_elbow'], self.positions['right_shoulder'])
+
+            # Distances entre les poignets et les coudes
+            self.distances_and_angles['left_wrist_to_left_elbow_dist'] = self.calculate_distance(self.positions['left_wrist'], self.positions['left_elbow'])
+            self.distances_and_angles['right_wrist_to_right_elbow_dist'] = self.calculate_distance(self.positions['right_wrist'], self.positions['right_elbow'])
+
+            # Distances entre les hanches et les genoux
+            self.distances_and_angles['left_hip_to_left_knee_dist'] = self.calculate_distance(self.positions['left_hip'], self.positions['left_knee'])
+            self.distances_and_angles['right_hip_to_right_knee_dist'] = self.calculate_distance(self.positions['right_hip'], self.positions['right_knee'])
+
+            # Distances entre les genoux et les chevilles
+            self.distances_and_angles['left_knee_to_left_ankle_dist'] = self.calculate_distance(self.positions['left_knee'], self.positions['left_ankle'])
+            self.distances_and_angles['right_knee_to_right_ankle_dist'] = self.calculate_distance(self.positions['right_knee'], self.positions['right_ankle'])
+
+            # Distances entre les épaules
+            self.distances_and_angles['left_shoulder_to_right_shoulder_dist'] = self.calculate_distance(self.positions['left_shoulder'], self.positions['right_shoulder'])
+
+            # Distances entre les hanches
+            self.distances_and_angles['left_hip_to_right_hip_dist'] = self.calculate_distance(self.positions['left_hip'], self.positions['right_hip'])
+
+            # Distances entre les yeux
+            self.distances_and_angles['left_eye_to_right_eye_dist'] = self.calculate_distance(self.positions['left_eye'], self.positions['right_eye'])
+
             # Distances entre le poignet et l'épaule
             self.distances_and_angles['left_wrist_to_left_shoulder_dist'] = self.calculate_distance(self.positions['left_wrist'], self.positions['left_shoulder'])
             self.distances_and_angles['right_wrist_to_right_shoulder_dist'] = self.calculate_distance(self.positions['right_wrist'], self.positions['right_shoulder'])
@@ -307,7 +336,7 @@ class Predict:
         # Start mediapipe instance
         self.mp=MediaPipe()
     
-    def predict(self,image_path,min_predictions=3):
+    def predict(self,image_path,min_predictions=5):
 
         i=0
         predictions=[]
@@ -332,7 +361,7 @@ class Predict:
             # Predict based on image_data
             predictions.append(self.model.predict(image_data)[0])
 
-        print(predictions)
+        # print(predictions)
         # Trouver l'élément le plus présent
         most_frequent_prediction = max(set(predictions), key=predictions.count)
 
