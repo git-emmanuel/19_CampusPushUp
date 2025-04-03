@@ -17,14 +17,16 @@ drawing_utils = mp.solutions.drawing_utils
 pushup_count = 0
 direction = None  # "down" or "up"
 sparkle_frames = 0  # Counter for sparkle duration
+mode = 'push-up'
 
 # Use Model in Real-Time Detection
-clf = joblib.load("classifier.pkl") #! the trained model
+clf_pushup  = joblib.load("models/push-up_classifier.pkl") 
+clf_yoga    = joblib.load("models/yoga_classifier.pkl")
 
 def play_sound():
     """Play a sound when a push-up is detected."""
     pygame.mixer.init()  # Initialize the mixer
-    pygame.mixer.music.load("drum.wav")  # Ensure this file is in the same directory or provide full path
+    pygame.mixer.music.load("media/drum.wav")  # Ensure this file is in the same directory or provide full path
     pygame.mixer.music.play()
 
 # Initialize MediaPipe Pose module
@@ -52,6 +54,7 @@ def calculate_angle(a, b, c):
     angle = math.degrees(math.acos(dot_product / (magnitude_ba * magnitude_bc)))
     return angle
     
+
 
 def detect_pushup(pose_landmarks):
     """Detect push-ups based on elbow, wrist, and shoulder landmarks."""
@@ -133,7 +136,7 @@ def draw_text_with_background(image, text, position):
 
 def draw_pose_results(image, results):
     """Draw elbow, wrist, and shoulder landmarks with lines between them and display the push-up count."""
-    global pushup_count, pushup_count_left,pushup_count_right, sparkle_frames
+    global pushup_count, pushup_count_left, pushup_count_right, sparkle_frames
     
     if results.pose_landmarks:
         detect_pushup(results.pose_landmarks)
@@ -148,6 +151,14 @@ def draw_pose_results(image, results):
         wrist_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
         shoulder_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
         
+        # Get more landmarks
+        hip_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
+        hip_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HIP]
+        knee_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
+        knee_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE]
+        foot_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HEEL]
+        foot_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HEEL]
+
         h, w, _ = image.shape
         
         # Draw points and lines for left arm
@@ -173,6 +184,31 @@ def draw_pose_results(image, results):
         # Draw lines for shoulders
         cv2.line(image, (shoulder_left_x, shoulder_left_y), (shoulder_right_x, shoulder_right_y), (255, 0, 255), 2)
 
+        # Draw more markers
+        hip_right_x, hip_right_y = int(hip_right.x * w), int(hip_right.y * h)
+        hip_left_x, hip_left_y = int(hip_left.x * w), int(hip_left.y * h)
+        knee_right_x, knee_right_y = int(knee_right.x * w), int(knee_right.y * h)
+        knee_left_x, knee_left_y = int(knee_left.x * w), int(knee_left.y * h)
+        cv2.circle(image, (hip_left_x, hip_left_y), 5, (0, 255, 0), -1)  
+        cv2.circle(image, (hip_right_x, hip_right_y), 5, (0, 255, 0), -1)
+        cv2.circle(image, (knee_left_x, knee_left_y), 5, (0, 255, 0), -1)  
+        cv2.circle(image, (knee_right_x, knee_right_y), 5, (0, 255, 0), -1)  
+        cv2.line(image, (hip_left_x, hip_left_y), (shoulder_left_x, shoulder_left_y), (255, 0, 255), 2)
+        cv2.line(image, (hip_right_x, hip_right_y), (shoulder_right_x, shoulder_right_y), (255, 0, 255), 2)
+        cv2.line(image, (hip_left_x, hip_left_y), (knee_left_x, knee_left_y), (255, 0, 255), 2)
+        cv2.line(image, (hip_right_x, hip_right_y), (knee_right_x, knee_right_y), (255, 0, 255), 2)
+
+        # Now, add points for the feet
+        foot_left_x, foot_left_y = int(foot_left.x * w), int(foot_left.y * h)  # Left foot
+        foot_right_x, foot_right_y = int(foot_right.x * w), int(foot_right.y * h)  # Right foot
+        # Draw the feet points
+        cv2.circle(image, (foot_left_x, foot_left_y), 5, (255, 255, 0), -1)  # Cyan (Left foot)
+        cv2.circle(image, (foot_right_x, foot_right_y), 5, (255, 255, 0), -1)  # Cyan (Right foot)
+
+        # Draw lines for feet connection 
+        cv2.line(image, (knee_left_x, knee_left_y), (foot_left_x, foot_left_y), (255, 0, 0), 2)  # Left leg line
+        cv2.line(image, (knee_right_x, knee_right_y), (foot_right_x, foot_right_y), (255, 0, 0), 2)  # Right leg line
+
     # Display push-up count and controls with black text on a white stripe
     draw_text_with_background(image, "Press 'r' to reset count", (30, 30))
     draw_text_with_background(image, "Press 'q' to quit", (30, 60))
@@ -181,9 +217,13 @@ def draw_pose_results(image, results):
     
     position_label = classify_position(results.pose_landmarks)
     draw_text_with_background(image, f"AI classification: {position_label}", (30, 150))
-    
+    draw_text_with_background(image, f"Mode (press 'm' to toggle): {mode}", (30, 180))
+
     # Add logo to the image at the top right corner
-    logo = cv2.imread("logo.png", cv2.IMREAD_UNCHANGED)
+    logo = cv2.imread("media/push-up_logo.png", cv2.IMREAD_UNCHANGED)
+    if mode == 'yoga':
+        logo = cv2.imread("media/yoga_logo.png", cv2.IMREAD_UNCHANGED)
+
     if logo is not None:
         image = overlay_image(image, logo, 10, 10)
 
@@ -205,25 +245,46 @@ def classify_position(pose_landmarks):
     knee = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
     elbow = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
     wrist = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
+    foot = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HEEL]
 
-    # Compute distances and elbow angle
+    # Calculate distances using math.dist (for simplicity, we stick to math.dist)
     shoulder_hip_dist = math.dist([shoulder.x, shoulder.y], [hip.x, hip.y])
     hip_knee_dist = math.dist([hip.x, hip.y], [knee.x, knee.y])
+    knee_foot_dist = math.dist([knee.x, knee.y], [foot.x, foot.y])
+
+    # Calculate angles using the calculate_angle function
     elbow_angle = calculate_angle(shoulder, elbow, wrist)
+    shoulder_foot_dist = np.linalg.norm([shoulder.x - foot.x, shoulder.y - foot.y])
+    hip_angle = calculate_angle(shoulder, hip, knee)
+    knee_angle = calculate_angle(hip, knee, foot)  
 
-    # Include elbow angle if the classifier was trained with it
-    feature_names = ["shoulder_hip_dist", "hip_knee_dist", "elbow_angle"]
-    features = pd.DataFrame([[shoulder_hip_dist, hip_knee_dist, elbow_angle]], columns=feature_names)
+    if mode == 'push-up':
+        feature_names = ["shoulder_hip_dist", "hip_knee_dist", "elbow_angle"]
+        features = pd.DataFrame([[shoulder_hip_dist, hip_knee_dist, elbow_angle]], columns=feature_names)
+        clf = clf_pushup
+        prediction = clf_pushup.predict(features)[0]
+    else:
+        feature_names = ["shoulder_hip_dist", "hip_knee_dist", "knee_foot_dist", "elbow_angle", "shoulder_foot_dist", "hip_angle", "knee_angle"]
+        features = pd.DataFrame([[shoulder_hip_dist, hip_knee_dist, knee_foot_dist, elbow_angle, shoulder_foot_dist, hip_angle, knee_angle]], columns=feature_names)
+        clf = clf_yoga
+        prediction = clf_yoga.predict(features)[0]
 
-    return clf.predict(features)[0]
+    # prediction = clf.predict(features)[0]
+    return prediction
+
 
 
 
 def run_pushup_counter(video_path='webcam'):
     """Run the push-up counter using a webcam or a video file."""
-    global pushup_count,pushup_count_left,pushup_count_right
+    global pushup_count,pushup_count_left,pushup_count_right, mode
     
     cap = cv2.VideoCapture(0) if video_path == 'webcam' else cv2.VideoCapture(video_path)
+
+    # Set resolution to 1920x1080 (widescreen)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # Set width (widescreen)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # Set height (widescreen)
+
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
     
     
@@ -251,6 +312,11 @@ def run_pushup_counter(video_path='webcam'):
             pushup_count = 0
             pushup_count_left = 0
             pushup_count_right = 0
+        elif key == ord('m'):
+            if mode != 'yoga':
+                mode = 'yoga'
+            else:
+                mode = 'push-up'
     
     cap.release()
     cv2.destroyAllWindows()
