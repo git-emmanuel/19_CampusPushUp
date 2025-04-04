@@ -11,8 +11,13 @@ def run_video_capture(video_path='webcam'):
     yoga_model=Predict("yoga_all_DecisionTreeClassifier.pkl")
     modes = [None, 'push-up', 'yoga']
     mode_index = 0
-    run_predict_every_n_frames=12
+    run_predict_every_n_frames=6
     frames=0
+    fullscreen=False
+
+    # Create a window
+    cv2.namedWindow('Video_Capture', cv2.WND_PROP_FULLSCREEN)
+    cv2.resizeWindow('Video_Capture', 800, 600)  # Définir la taille initiale de la fenêtre
     
     # Define video capture
     cap = cv2.VideoCapture(0) if video_path == 'webcam' else cv2.VideoCapture(video_path)
@@ -58,8 +63,16 @@ def run_video_capture(video_path='webcam'):
         image = ppi.image_post_processing_sparkles(image)
         image = ppi.image_post_processing_fps(image)
 
-        # Show the video feed
+        # Set RGB
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+        # Resize image size
+        if fullscreen : 
+            image = cv2.resize(image, (1400,1000))
+        else:
+            image = cv2.resize(image, (800, 600))
+
+        # Show the video feed
         cv2.imshow('Video_Capture', image)
         
         key = cv2.waitKey(1) & 0xFF
@@ -70,11 +83,17 @@ def run_video_capture(video_path='webcam'):
 
         # Reset counter
         elif key == ord('r'):
-            pushup_count = 0
+            ppi.pushup_count=0
 
         # Toggle detection mode     
         elif key == ord('m'):
             mode_index = (mode_index + 1) % len(modes)
+
+         # Toggle fullscreen
+        elif key == ord('f'):
+            fullscreen = not fullscreen
+            cv2.setWindowProperty('Video_Capture', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
+
     
     # Close video capture
     cap.release()

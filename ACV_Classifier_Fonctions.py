@@ -385,13 +385,16 @@ class Post_processing:
     def __init__(self):
         self.ppi_mediapipe=MediaPipe()
         self.pushup_logo = cv2.imread("media/push-up_logo.png", cv2.IMREAD_UNCHANGED)
+        self.pushup_logo=cv2.resize(self.pushup_logo, (800,800))
         self.yoga_logo = cv2.imread("media/yoga_logo.png", cv2.IMREAD_UNCHANGED)
+        self.yoga_logo=cv2.resize(self.yoga_logo, (1400,800))
         self.pushup_count = 0 # Init pushup_count
         self.previous_position_label = None # Init position_label
         self.sparkle_frames = 0  # Counter for sparkle duration
         pygame.mixer.init()  # Initialize the mixer
         pygame.mixer.music.load("./media/drum.wav")  # Ensure this file is in the same directory or provide full path
-        self.prev_time = time.time()  
+        self.prev_time = time.time()
+        self.fps_values=[]
 
         
     def image_post_processing_poselandmark(self,image):
@@ -451,7 +454,6 @@ class Post_processing:
             
         except:
             None
-    
         return image
     
     def image_post_processing_logo(self,image, mode):
@@ -466,21 +468,21 @@ class Post_processing:
                     logo = None
 
             if logo is not None:
-                image = overlay_image(image, logo, 10, 10)
+                image = overlay_image(image, logo, 5, 5,scale=0.15)
         except : 
             None
-
         return image
     
 
     def image_post_processing_text(self,image, mode,position_label=None):
         try : 
+
             # Display push-up count and controls with black text on a white stripe
-            draw_text_with_background(image, "Press 'r' to reset count", (30, 30))
-            draw_text_with_background(image, "Press 'q' to quit", (30, 60))
-            draw_text_with_background(image, "Press 'f' for full screen", (30, 90))
-            draw_text_with_background(image, f"Mode (press 'm' to toggle): {mode}", (30, 120))
-            draw_text_with_background(image, f"AI classification: {position_label}", (30, 150))
+            draw_text_with_background(image, "Press 'r' to reset count", (5, 20))
+            draw_text_with_background(image, "Press 'q' to quit", (5, 40))
+            draw_text_with_background(image, "Press 'f' for full screen", (5, 60))
+            draw_text_with_background(image, f"Mode (press 'm' to toggle): {mode}", (5, 80))
+            draw_text_with_background(image, f"AI classification: {position_label}", (5, 100))
 
             # Add counter
             if mode=='push-up':
@@ -490,10 +492,9 @@ class Post_processing:
                     self.sparkle_frames = 10  # Trigger sparkles for next 10 frames
                     pygame.mixer.music.play()
                 self.previous_position_label=position_label
-                draw_text_with_background(image, f"Push-up Count: {self.pushup_count}", (30, 180))
+                draw_text_with_background(image, f"Push-up Count: {self.pushup_count}", (5, 140))
         except : 
             None
-        
         return image
     
     def image_post_processing_sparkles(self,image):
@@ -504,19 +505,20 @@ class Post_processing:
                 self.sparkle_frames -= 1  # Decrease count each frame
         except : 
             None
-
         return image
     
     def image_post_processing_fps(self,image):
         try : 
             # Displays FPS
             curr_time = time.time()
-            fps = 1 / (curr_time - self.prev_time)
+            if len(self.fps_values)>10:
+                self.fps_values.pop(0)
+            if len(self.fps_values)<10:
+                self.fps_values.append(1 / (curr_time - self.prev_time))
+            draw_text_with_background(image, f"FPS: {int(np.mean(self.fps_values))}", (5, 120))
             self.prev_time = curr_time
-            draw_text_with_background(image, f"FPS: {int(fps)}", (30, 210))
         except : 
             None
-
         return image
 
 def overlay_image(background, overlay, x, y, scale=0.1):
@@ -524,7 +526,18 @@ def overlay_image(background, overlay, x, y, scale=0.1):
     h, w, _ = background.shape
     overlay = cv2.resize(overlay, (int(overlay.shape[1] * scale), int(overlay.shape[0] * scale)))
     oh, ow, _ = overlay.shape
-    x, y = w - ow - 20, 20  # Position at the top right
+
+    # Calculer la position x, y pour placer l'overlay à une distance spécifique du coin supérieur droit
+    x = background.shape[1] - ow - x
+
+    if x < 0:
+        x = 0
+    if y < 0:
+        y = 0
+    if x + ow > background.shape[1]:
+        x = background.shape[1] - ow
+    if y + oh > background.shape[0]:
+        y = background.shape[0] - oh
     
     if overlay.shape[2] == 4:  # Handle transparency
         alpha_channel = overlay[:, :, 3] / 255.0
@@ -548,7 +561,7 @@ def draw_sparkles(image):
 def draw_text_with_background(image, text, position):
     """Draw black text on a white background strip."""
     font = cv2.FONT_HERSHEY_DUPLEX
-    font_scale = 0.7
+    font_scale = 0.5
     font_thickness = 1
     text_size = cv2.getTextSize(text, font, font_scale, font_thickness)[0]
     x, y = position
