@@ -3,7 +3,7 @@ import mediapipe as mp
 import pygame
 import math
 import sys
-import time
+# import time
 import numpy as np
 import joblib
 import pandas as pd
