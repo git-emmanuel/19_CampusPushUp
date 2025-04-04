@@ -54,6 +54,19 @@ docker build -t acv_fitness_project .
 xhost +local:docker
 docker run --rm -p 8000:8000 -e SDL_AUDIODRIVER=dummy --device /dev/video0 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix acv_fitness_project:latest
 ```
+<!-- libEGL warning: DRI3: Screen seems not DRI3 capable
+libEGL warning: DRI2: failed to authenticate
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1743768749.454935       1 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1743768749.461602      71 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 Mesa 22.3.6), renderer: llvmpipe (LLVM 15.0.6, 256 bits)
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1743768749.534921      47 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1743768749.582529      50 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1743768751.468965      53 landmark_projection_calculator.cc:186] Using NORM_RECT without IMAGE_DIMENSIONS is only supported for the square ROI. Provide IMAGE_DIMENSIONS or use PROJECTION_MATRIX.
+pygame 2.6.1 (SDL 2.28.4, Python 3.12.9)
+Hello from the pygame community. https://www.pygame.org/contribute.html -->
+
+
 
 # Pushing to docker hub
 
@@ -71,18 +84,14 @@ docker push emmanuelxdocker/acv_fitness_project:latest
 
 # Pulling from docker hub
 
-
 Add Docker's Official Repository
 ```bash
 sudo apt update
-sudo apt install apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+# ...
 ```
 
 Install Docker Engine
 `sudo apt install docker-ce`
-
 
 Install Docker Desktop
 `sudo apt install ./Downloads/docker-desktop-amd64.de`
@@ -94,3 +103,5 @@ Error message indicating that the path /tmp/.X11-unix is not shared from the hos
 - Add the /tmp/.X11-unix directory to the list of shared paths.
 
 `docker run --rm -p 8000:8000 -e SDL_AUDIODRIVER=dummy --privileged --device /dev/video0 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix emmanuelxdocker/acv_fitness_project:latest`
+
+

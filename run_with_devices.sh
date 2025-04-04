@@ -14,6 +14,7 @@ docker run --rm \
   acv_fitness_project:latest
 
 # Make it executable: chmod +x run_with_devices.sh
-# Then just run: ./run_with_devices.sh
+# Then just run: bash run_with_devices.sh
 
-#   -e SDL_AUDIODRIVER=pulse \
+# Removed
+# -e SDL_AUDIODRIVER=pulse \

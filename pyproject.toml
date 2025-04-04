@@ -21,3 +21,22 @@ dependencies = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+# Ensure there is no conflict in package configuration
+# [tool.poetry]
+# name = "project_poetry_wheel"
+# version = "0.1.0"
+# description = ""
+# authors = ["git_emmanuel <e.virot.phd+git@gmail.com>"]
+# packages = [
+#     { include = "src/project_poetry_wheel", from = "src/project_poetry_wheel", to = "project_poetry_wheel" }
+# ]
+
+# # Include directories for non-Python files, in order to create a wheel
+# [[tool.poetry.include]]
+# path = "media/*"
+# destination = "media"
+
+# [[tool.poetry.include]]
+# path = "models/*"
+# destination = "models"
