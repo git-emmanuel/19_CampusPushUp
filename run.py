@@ -56,6 +56,7 @@ def run_video_capture(video_path='webcam'):
         image = ppi.image_post_processing_logo(image,mode)
         image = ppi.image_post_processing_text(image,mode,prediction)
         image = ppi.image_post_processing_sparkles(image)
+        image = ppi.image_post_processing_fps(image)
 
         # Show the video feed
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)

@@ -12,6 +12,7 @@ from sklearn.tree import DecisionTreeClassifier
 import joblib
 import kagglehub
 import pygame
+import time
 
 
 class MediaPipe:
@@ -390,6 +391,7 @@ class Post_processing:
         self.sparkle_frames = 0  # Counter for sparkle duration
         pygame.mixer.init()  # Initialize the mixer
         pygame.mixer.music.load("./media/drum.wav")  # Ensure this file is in the same directory or provide full path
+        self.prev_time = time.time()  
 
         
     def image_post_processing_poselandmark(self,image):
@@ -504,7 +506,18 @@ class Post_processing:
             None
 
         return image
-        
+    
+    def image_post_processing_fps(self,image):
+        try : 
+            # Displays FPS
+            curr_time = time.time()
+            fps = 1 / (curr_time - self.prev_time)
+            self.prev_time = curr_time
+            draw_text_with_background(image, f"FPS: {int(fps)}", (30, 210))
+        except : 
+            None
+
+        return image
 
 def overlay_image(background, overlay, x, y, scale=0.1):
     """Overlay an image onto another at a specified position with scaling."""
