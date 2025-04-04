@@ -377,9 +377,148 @@ class Predict:
         most_frequent_prediction = max(set(predictions), key=predictions.count)
 
         return most_frequent_prediction
-        
-
     
+
+class Post_processing:
+    def __init__(self):
+        self.ppi_mediapipe=MediaPipe()
+        
+    def image_post_processing_poselandmark(self,image):
+        """Draw elbow, wrist, and shoulder landmarks with lines between them and display the push-up count."""
+        
+        # Get Image shape
+        h, w, _ = image.shape
+        circle_color=(0, 0, 255)
+        circle_size=3
+        line_color=(0, 255, 0)
+        line_thickness=2
+        
+        try : 
+            # Get positions
+            positions=self.ppi_mediapipe.get_positions(image)
+
+            # for each position, adapt to image shape and trace circle
+            positions_shaped={}
+            for position in positions:
+                positions_shaped[position]={'x':int(positions[position].x * w),'y': int(positions[position].y * h)}
+                cv2.circle(image, (positions_shaped[position]['x'], positions_shaped[position]['y']), circle_size, circle_color, -1)
+            
+           
+            # Dessiner les lignes
+            cv2.line(image, (positions_shaped['left_elbow']['x'], positions_shaped['left_elbow']['y']),
+                    (positions_shaped['left_shoulder']['x'], positions_shaped['left_shoulder']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['left_wrist']['x'], positions_shaped['left_wrist']['y']),
+                    (positions_shaped['left_elbow']['x'], positions_shaped['left_elbow']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['right_elbow']['x'], positions_shaped['right_elbow']['y']),
+                    (positions_shaped['right_shoulder']['x'], positions_shaped['right_shoulder']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['right_wrist']['x'], positions_shaped['right_wrist']['y']),
+                    (positions_shaped['right_elbow']['x'], positions_shaped['right_elbow']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['left_shoulder']['x'], positions_shaped['left_shoulder']['y']),
+                    (positions_shaped['right_shoulder']['x'], positions_shaped['right_shoulder']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['left_hip']['x'], positions_shaped['left_hip']['y']),
+                    (positions_shaped['left_shoulder']['x'], positions_shaped['left_shoulder']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['right_hip']['x'], positions_shaped['right_hip']['y']),
+                    (positions_shaped['right_shoulder']['x'], positions_shaped['right_shoulder']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['left_hip']['x'], positions_shaped['left_hip']['y']),
+                    (positions_shaped['left_knee']['x'], positions_shaped['left_knee']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['right_hip']['x'], positions_shaped['right_hip']['y']),
+                    (positions_shaped['right_knee']['x'], positions_shaped['right_knee']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['left_knee']['x'], positions_shaped['left_knee']['y']),
+                    (positions_shaped['left_foot_index']['x'], positions_shaped['left_foot_index']['y']), line_color, line_thickness)
+
+            cv2.line(image, (positions_shaped['right_knee']['x'], positions_shaped['right_knee']['y']),
+                    (positions_shaped['right_foot_index']['x'], positions_shaped['right_foot_index']['y']), line_color, line_thickness)
+
+        except:
+            None
+    
+        return image
+
+    def image_post_processing_text(self,image, mode,position_label=None):
+        global pushup_count, sparkle_frames, previous_position_label
+
+        # Display push-up count and controls with black text on a white stripe
+        draw_text_with_background(image, "Press 'r' to reset count", (30, 30))
+        draw_text_with_background(image, "Press 'q' to quit", (30, 60))
+        draw_text_with_background(image, "Press 'f' for full screen", (30, 90))
+        draw_text_with_background(image, f"Mode (press 'm' to toggle): {mode}", (30, 120))
+        draw_text_with_background(image, f"AI classification: {position_label}", (30, 150))
+
+        # Add counter
+        if mode=='push-up':
+            # Update counter
+            if position_label=='position_up' and position_label!=previous_position_label and previous_position_label!=None:
+                pushup_count +=1
+                sparkle_frames = 10  # Trigger sparkles for next 10 frames
+                # play_sound()
+            previous_position_label=position_label
+            draw_text_with_background(image, f"Push-up Count: {pushup_count}", (30, 180))
+
+        # Add logo to the image at the top right corner
+        match mode:
+            case 'push-up':
+                logo = cv2.imread("media/push-up_logo.png", cv2.IMREAD_UNCHANGED)
+            case 'yoga':
+                logo = cv2.imread("media/yoga_logo.png", cv2.IMREAD_UNCHANGED)
+            case _:
+                logo = None
+
+        if logo is not None:
+            image = overlay_image(image, logo, 10, 10)
+
+        # Show sparkles only for 10 frames after a push-up is detected
+        if sparkle_frames > 0:
+            image = draw_sparkles(image)
+            sparkle_frames -= 1  # Decrease count each frame
+
+        return image
+    
+    def overlay_image(background, overlay, x, y, scale=0.1):
+        """Overlay an image onto another at a specified position with scaling."""
+        h, w, _ = background.shape
+        overlay = cv2.resize(overlay, (int(overlay.shape[1] * scale), int(overlay.shape[0] * scale)))
+        oh, ow, _ = overlay.shape
+        x, y = w - ow - 20, 20  # Position at the top right
+        
+        if overlay.shape[2] == 4:  # Handle transparency
+            alpha_channel = overlay[:, :, 3] / 255.0
+            for c in range(3):
+                background[y:y+oh, x:x+ow, c] = (1 - alpha_channel) * background[y:y+oh, x:x+ow, c] + alpha_channel * overlay[:, :, c]
+        else:
+            background[y:y+oh, x:x+ow] = overlay
+        return background
+
+
+    def draw_sparkles(image):
+        """Draw sparkles at random positions on the image."""
+        h, w, _ = image.shape
+        for _ in range(50):  # More sparkles
+            x, y = np.random.randint(0, w), np.random.randint(0, h)
+            cv2.circle(image, (x, y), 4, (255, 255, 255), -1)  # White small dots
+            x, y = np.random.randint(0, w), np.random.randint(0, h)
+            color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))  # Slightly yellowish-white
+            cv2.circle(image, (x, y), np.random.randint(3, 6), color, -1)
+        return image
+
+
+    def draw_text_with_background(image, text, position):
+        """Draw black text on a white background strip."""
+        font = cv2.FONT_HERSHEY_DUPLEX
+        font_scale = 0.7
+        font_thickness = 1
+        text_size = cv2.getTextSize(text, font, font_scale, font_thickness)[0]
+        x, y = position
+        cv2.rectangle(image, (x - 5, y - text_size[1] - 5), (x + text_size[0] + 5, y + 5), (255, 255, 255), -1)
+        cv2.putText(image, text, (x, y), font, font_scale, (0, 0, 0), font_thickness)
 
 
 

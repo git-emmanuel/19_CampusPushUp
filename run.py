@@ -1,20 +1,13 @@
 import cv2
-import mediapipe as mp
 import pygame
 import math
 import sys
-import time
 import numpy as np
-import joblib
 import pandas as pd
-from ACV_Classifier_Fonctions import Predict
+from ACV_Classifier_Fonctions import Predict,Post_processing
 
 # Initialize pygame mixer for sound
 pygame.mixer.init()
-
-# Initialize MediaPipe Pose module
-mp_pose = mp.solutions.pose
-
 
 pushup_count = 0 # Init pushup_count
 previous_position_label = None # Init position_label
@@ -26,21 +19,6 @@ def play_sound():
     pygame.mixer.music.load("./media/drum.wav")  # Ensure this file is in the same directory or provide full path
     pygame.mixer.music.play()
 
-
-def calculate_angle(a, b, c):
-    """Calculate the angle between three points: a (shoulder), b (elbow), and c (wrist)."""
-    ba = (a.x - b.x, a.y - b.y)  # Vector BA
-    bc = (c.x - b.x, c.y - b.y)  # Vector BC
-
-    dot_product = ba[0] * bc[0] + ba[1] * bc[1]
-    magnitude_ba = math.sqrt(ba[0] ** 2 + ba[1] ** 2)
-    magnitude_bc = math.sqrt(bc[0] ** 2 + bc[1] ** 2)
-
-    if magnitude_ba * magnitude_bc == 0:
-        return 0  # Avoid division by zero
-
-    angle = math.degrees(math.acos(dot_product / (magnitude_ba * magnitude_bc)))
-    return angle
 
 def overlay_image(background, overlay, x, y, scale=0.1):
     """Overlay an image onto another at a specified position with scaling."""
@@ -81,79 +59,8 @@ def draw_text_with_background(image, text, position):
     cv2.putText(image, text, (x, y), font, font_scale, (0, 0, 0), font_thickness)
 
 
-def draw_pose_results(image, mode,results=None,position_label=None):
-    """Draw elbow, wrist, and shoulder landmarks with lines between them and display the push-up count."""
+def image_post_processing_text(image, mode,position_label=None):
     global pushup_count, sparkle_frames, previous_position_label
-    
-    if results.pose_landmarks:
-    
-        # Get landmark coordinates for left arm
-        elbow_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
-        wrist_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
-        shoulder_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
-
-        # Get landmark coordinates for right arm
-        elbow_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_ELBOW]
-        wrist_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
-        shoulder_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
-        
-        # Get more landmarks
-        hip_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
-        hip_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HIP]
-        knee_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
-        knee_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE]
-        foot_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HEEL]
-        foot_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HEEL]
-
-        h, w, _ = image.shape
-        
-        # Draw points and lines for left arm
-        elbow_left_x, elbow_left_y = int(elbow_left.x * w), int(elbow_left.y * h)
-        wrist_left_x, wrist_left_y = int(wrist_left.x * w), int(wrist_left.y * h)
-        shoulder_left_x, shoulder_left_y = int(shoulder_left.x * w), int(shoulder_left.y * h)
-        cv2.circle(image, (elbow_left_x, elbow_left_y), 5, (0, 0, 255), -1)  # Red (Elbow)
-        cv2.circle(image, (wrist_left_x, wrist_left_y), 5, (0, 255, 0), -1)  # Green (Wrist)
-        cv2.circle(image, (shoulder_left_x, shoulder_left_y), 5, (255, 0, 0), -1)  # Blue (Shoulder)
-        cv2.line(image, (elbow_left_x, elbow_left_y), (shoulder_left_x, shoulder_left_y), (255, 255, 0), 2)
-        cv2.line(image, (wrist_left_x, wrist_left_y), (elbow_left_x, elbow_left_y), (255, 0, 255), 2)
-
-        # Draw points and lines for right arm
-        elbow_right_x, elbow_right_y = int(elbow_right.x * w), int(elbow_right.y * h)
-        wrist_right_x, wrist_right_y = int(wrist_right.x * w), int(wrist_right.y * h)
-        shoulder_right_x, shoulder_right_y = int(shoulder_right.x * w), int(shoulder_right.y * h)
-        cv2.circle(image, (elbow_right_x, elbow_right_y), 5, (0, 0, 255), -1)  # Red (Elbow)
-        cv2.circle(image, (wrist_right_x, wrist_right_y), 5, (0, 255, 0), -1)  # Green (Wrist)
-        cv2.circle(image, (shoulder_right_x, shoulder_right_y), 5, (255, 0, 0), -1)  # Blue (Shoulder)
-        cv2.line(image, (elbow_right_x, elbow_right_y), (shoulder_right_x, shoulder_right_y), (255, 255, 0), 2)
-        cv2.line(image, (wrist_right_x, wrist_right_y), (elbow_right_x, elbow_right_y), (255, 0, 255), 2)
-
-        # Draw lines for shoulders
-        cv2.line(image, (shoulder_left_x, shoulder_left_y), (shoulder_right_x, shoulder_right_y), (255, 0, 255), 2)
-
-        # Draw more markers
-        hip_right_x, hip_right_y = int(hip_right.x * w), int(hip_right.y * h)
-        hip_left_x, hip_left_y = int(hip_left.x * w), int(hip_left.y * h)
-        knee_right_x, knee_right_y = int(knee_right.x * w), int(knee_right.y * h)
-        knee_left_x, knee_left_y = int(knee_left.x * w), int(knee_left.y * h)
-        cv2.circle(image, (hip_left_x, hip_left_y), 5, (0, 255, 0), -1)  
-        cv2.circle(image, (hip_right_x, hip_right_y), 5, (0, 255, 0), -1)
-        cv2.circle(image, (knee_left_x, knee_left_y), 5, (0, 255, 0), -1)  
-        cv2.circle(image, (knee_right_x, knee_right_y), 5, (0, 255, 0), -1)  
-        cv2.line(image, (hip_left_x, hip_left_y), (shoulder_left_x, shoulder_left_y), (255, 0, 255), 2)
-        cv2.line(image, (hip_right_x, hip_right_y), (shoulder_right_x, shoulder_right_y), (255, 0, 255), 2)
-        cv2.line(image, (hip_left_x, hip_left_y), (knee_left_x, knee_left_y), (255, 0, 255), 2)
-        cv2.line(image, (hip_right_x, hip_right_y), (knee_right_x, knee_right_y), (255, 0, 255), 2)
-
-        # Now, add points for the feet
-        foot_left_x, foot_left_y = int(foot_left.x * w), int(foot_left.y * h)  # Left foot
-        foot_right_x, foot_right_y = int(foot_right.x * w), int(foot_right.y * h)  # Right foot
-        # Draw the feet points
-        cv2.circle(image, (foot_left_x, foot_left_y), 5, (255, 255, 0), -1)  # Cyan (Left foot)
-        cv2.circle(image, (foot_right_x, foot_right_y), 5, (255, 255, 0), -1)  # Cyan (Right foot)
-
-        # Draw lines for feet connection 
-        cv2.line(image, (knee_left_x, knee_left_y), (foot_left_x, foot_left_y), (255, 0, 0), 2)  # Left leg line
-        cv2.line(image, (knee_right_x, knee_right_y), (foot_right_x, foot_right_y), (255, 0, 0), 2)  # Right leg line
 
     # Display push-up count and controls with black text on a white stripe
     draw_text_with_background(image, "Press 'r' to reset count", (30, 30))
@@ -195,16 +102,16 @@ def draw_pose_results(image, mode,results=None,position_label=None):
 def run_video_capture(video_path='webcam'):
     """Run the video capture using a webcam or a video file."""
     global pushup_count, mode
-    
-    cap = cv2.VideoCapture(0) if video_path == 'webcam' else cv2.VideoCapture(video_path)
-    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    
+
+    ppi=Post_processing()
     pushup_model=Predict("pushup_all_DecisionTreeClassifier.pkl")
     yoga_model=Predict("yoga_all_DecisionTreeClassifier.pkl")
     modes = [None, 'push-up', 'yoga']
     mode_index = 0
     run_predict_every_n_frames=15
     frames=0
+    
+    cap = cv2.VideoCapture(0) if video_path == 'webcam' else cv2.VideoCapture(video_path)
     
     while cap.isOpened():
         success, image = cap.read()
@@ -215,8 +122,7 @@ def run_video_capture(video_path='webcam'):
             image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
         else:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        results = pose.process(image)
+
         
         # Mode affiliation
         mode=modes[mode_index]
@@ -240,8 +146,9 @@ def run_video_capture(video_path='webcam'):
             except :
                 prediction = None
 
-        # Image post-processing   
-        image = draw_pose_results(image,mode,results,position_label=prediction)
+        # Image post-processing 
+        image=ppi.image_post_processing_poselandmark(image)  
+        image = image_post_processing_text(image,mode,prediction)
 
         # Show the video feed
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
