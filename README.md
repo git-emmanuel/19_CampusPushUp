@@ -29,6 +29,9 @@ poetry add pandas
 # math, sys, time already installed
 poetry add scikit-learn
 poetry run python run.py # to check that everything is fine
+# poetry lock # to regenerate in case the .toml file is changed by hand
+poetry show --outdated
+# poetry install # to install the dependencies at the end
 ```
 
 ```bash
@@ -45,7 +48,6 @@ poetry run python run.py # to check that everything is fine
 # docker images
 # docker container ls -a
 docker system prune
-# poetry lock # to regenerate in case the .toml file is changed by hand
 docker images && echo '=====' &&  docker ps && echo '====='
 docker build -t acv_fitness_project .
 # docker run --rm -p 8000:8000 -e SDL_AUDIODRIVER=dummy acv_fitness_project:latest # this would have been too easy ....
@@ -70,5 +72,25 @@ docker push emmanuelxdocker/acv_fitness_project:latest
 # Pulling from docker hub
 
 
+Add Docker's Official Repository
+```bash
+sudo apt update
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+
+Install Docker Engine
+`sudo apt install docker-ce`
 
 
+Install Docker Desktop
+`sudo apt install ./Downloads/docker-desktop-amd64.de`
+
+Error message indicating that the path /tmp/.X11-unix is not shared from the host and is not known to Docker. 
+- Go to Preferences (or Settings on Windows) in Docker Desktop.
+- Navigate to the Resources section.
+- Under File Sharing, click on the + icon to add a new directory.
+- Add the /tmp/.X11-unix directory to the list of shared paths.
+
+`docker run --rm -p 8000:8000 -e SDL_AUDIODRIVER=dummy --privileged --device /dev/video0 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix emmanuelxdocker/acv_fitness_project:latest`

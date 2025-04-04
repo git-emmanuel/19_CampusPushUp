@@ -3,7 +3,7 @@ import mediapipe as mp
 import pygame
 import math
 import sys
-# import time
+import time
 import numpy as np
 import joblib
 import pandas as pd
@@ -25,7 +25,7 @@ clf_yoga    = joblib.load("models/yoga_classifier.pkl")
 
 def play_sound():
     """Play a sound when a push-up is detected."""
-    pygame.mixer.init()  # Initialize the mixer
+    # pygame.mixer.init()  # Initialize the mixer
     pygame.mixer.music.load("media/drum.wav")  # Ensure this file is in the same directory or provide full path
     pygame.mixer.music.play()
 
@@ -261,8 +261,9 @@ def classify_position(pose_landmarks):
 
 def run_pushup_counter(video_path='webcam'):
     """Run the push-up counter using a webcam or a video file."""
-    global pushup_count,pushup_count_left,pushup_count_right, mode
-    
+    global pushup_count,pushup_count_left,pushup_count_right, mode, prev_time
+
+    prev_time = time.time()  
     cap = cv2.VideoCapture(0) if video_path == 'webcam' else cv2.VideoCapture(video_path)
 
     # Set resolution to 1920x1080 (widescreen)
@@ -285,7 +286,13 @@ def run_pushup_counter(video_path='webcam'):
         results = pose.process(image)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         image = draw_pose_results(image, results)
-        
+
+        # Displays FPS
+        curr_time = time.time()
+        fps = 1 / (curr_time - prev_time)
+        prev_time = curr_time
+        draw_text_with_background(image, f"FPS: {int(fps)}", (30, 210))
+
         # Show the video feed
         cv2.imshow('Push-up Counter', image)
         
@@ -301,7 +308,7 @@ def run_pushup_counter(video_path='webcam'):
                 mode = 'yoga'
             else:
                 mode = 'push-up'
-    
+        
     cap.release()
     cv2.destroyAllWindows()
 
