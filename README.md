@@ -8,7 +8,7 @@ Welcome to the CampusPushUp repository.
 This project is a collaborative effort by Romain, Emmanuel, and Karim.
 
 
-# Running the projetc==ct
+# Running the project
 
 In the terminal, run: ` python run.py 'media/yoga.mp4' `
 
@@ -31,6 +31,7 @@ poetry add scikit-learn
 poetry run python run.py # to check that everything is fine
 ```
 
+```bash
 "numpy (>=1.21.0,<3.0.0)",
 "opencv-python (>=4.11.0.86,<5.0.0.0)",
 "mediapipe (>=0.10.21,<0.11.0)",
@@ -38,6 +39,7 @@ poetry run python run.py # to check that everything is fine
 "joblib (>=1.4.2,<2.0.0)",
 "pandas (>=2.2.3,<3.0.0)",
 "scikit-learn (==1.5.2)"
+```
 
 ```bash
 # docker images
@@ -61,7 +63,9 @@ docker push emmanuelxdocker/acv_fitness_project:latest
 ```
 
 `du -sh $(pip show $(pip list --format=freeze | cut -d= -f1) | grep Location | awk '{print $2}')/* 2>/dev/null | sort -hr`
+
 `du -ch $(pip show $(pip list --format=freeze | cut -d= -f1) | grep Location | awk '{print $2}')/* 2>/dev/null | grep total`
+
 
 # Pulling from docker hub
 
