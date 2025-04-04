@@ -364,14 +364,12 @@ class Predict:
             return None
 
     
-    def mean_predict(self,image,min_predictions=1):
+    def mean_predict(self,prediction,min_predictions=20):
 
-        i=0
         predictions=[]
-        while i<min_predictions:
-            i+=1
-            prediction=self.predict(image)
-            # Predict based on image_data
+        if len(predictions)>=min_predictions:
+            predictions.pop[0]
+        if len(predictions)<min_predictions:
             if prediction is not None:
                 predictions.append(prediction)
 
@@ -395,6 +393,7 @@ class Post_processing:
         pygame.mixer.music.load("./media/drum.wav")  # Ensure this file is in the same directory or provide full path
         self.prev_time = time.time()
         self.fps_values=[]
+        self.load_yoga_images()
 
         
     def image_post_processing_poselandmark(self,image):
@@ -456,14 +455,17 @@ class Post_processing:
             None
         return image
     
-    def image_post_processing_logo(self,image, mode):
+    def image_post_processing_logo(self,image, mode,prediction=None):
         try : 
             # Add logo to the image at the top right corner
             match mode:
                 case 'push-up':
                     logo = self.pushup_logo
                 case 'yoga':
-                    logo = self.yoga_logo
+                    try:
+                        logo=self.yoga_images[prediction]
+                    except :
+                        logo = self.yoga_logo
                 case _:
                     logo = None
 
@@ -482,8 +484,10 @@ class Post_processing:
             draw_text_with_background(image, "Press 'q' to quit", (5, 40))
             draw_text_with_background(image, "Press 'f' for full screen", (5, 60))
             draw_text_with_background(image, f"Mode (press 'm' to toggle): {mode}", (5, 80))
+            if mode=='yoga':
+                position_label=self.yoga_positions['Francais'][self.yoga_positions['Anglais']==position_label].values[0]
+            
             draw_text_with_background(image, f"AI classification: {position_label}", (5, 100))
-
             # Add counter
             if mode=='push-up':
                 # Update counter
@@ -520,7 +524,24 @@ class Post_processing:
         except : 
             None
         return image
-
+    
+    def load_yoga_images(self):
+        self.yoga_positions=pd.read_csv('./embeddings/yoga_positions.csv')
+        base_folder='/home/romain.meunier@Digital-Grenoble.local/.cache/kagglehub/datasets/tr1gg3rtrash/yoga-posture-dataset/versions/1'
+        self.yoga_images_path={}
+        for label in os.listdir(base_folder):
+            label_folder = os.path.join(base_folder, label)
+            if not os.path.isdir(label_folder):
+                continue
+            self.yoga_images_path[label]={}
+            for i,image_name in enumerate(os.listdir(label_folder)):
+                self.yoga_images_path[label][i] = os.path.join(label_folder, image_name)
+        self.yoga_images_path=pd.DataFrame(self.yoga_images_path).iloc[0,:].to_dict()
+        self.yoga_images={}
+        for label in self.yoga_images_path:
+            yoga_image = cv2.imread(self.yoga_images_path[label], cv2.IMREAD_UNCHANGED)
+            self.yoga_images[label] = cv2.resize(yoga_image, (1400,800))
+            
 def overlay_image(background, overlay, x, y, scale=0.1):
     """Overlay an image onto another at a specified position with scaling."""
     h, w, _ = background.shape

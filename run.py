@@ -14,6 +14,7 @@ def run_video_capture(video_path='webcam'):
     run_predict_every_n_frames=6
     frames=0
     fullscreen=False
+    model=None
 
     # Create a window
     cv2.namedWindow('Video_Capture', cv2.WND_PROP_FULLSCREEN)
@@ -44,12 +45,16 @@ def run_video_capture(video_path='webcam'):
             
             match mode:
                 case 'push-up':
-                    prediction = pushup_model.mean_predict(image,min_predictions=1)
+                    model = pushup_model
                 case 'yoga':
-                    prediction = yoga_model.mean_predict(image,min_predictions=1)
+                    model = yoga_model
                 case _:
                     prediction = None
-            previous_prediction=prediction
+
+            if model is not None : 
+                prediction = model.predict(image)
+                prediction = model.mean_predict(prediction)
+                previous_prediction=prediction
         else : 
             try :
                 prediction = previous_prediction
@@ -58,7 +63,7 @@ def run_video_capture(video_path='webcam'):
 
         # Image post-processing 
         image = ppi.image_post_processing_poselandmark(image)  
-        image = ppi.image_post_processing_logo(image,mode)
+        image = ppi.image_post_processing_logo(image,mode,prediction)
         image = ppi.image_post_processing_text(image,mode,prediction)
         image = ppi.image_post_processing_sparkles(image)
         image = ppi.image_post_processing_fps(image)
