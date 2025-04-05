@@ -293,13 +293,13 @@ class Embeddings:
         embeddings=pd.read_csv(embeddings_pathfile)
         return embeddings
     
-    def generate_embeddings_from_kaggle(self,kaggle_path,embeddings_filename,features=None,show_images=False,date_generation=False):
+    def import_from_kaggle(self,kaggle_path):
 
         # Download latest version
         base_folder = kagglehub.dataset_download(kaggle_path)
         print("Path to dataset files:", base_folder)
         
-        return self.generate_embeddings(base_folder,embeddings_filename,features,show_images,date_generation)
+        return base_folder
 
 class Classifier:
     def __init__(self,embedding_folders='./embeddings',models_folder='./models'):
@@ -478,20 +478,20 @@ class Post_processing:
 
     def image_post_processing_text(self,image, mode,position_label=None):
         try : 
+            if mode=='yoga':
+                position_label=self.yoga_positions['Francais'][self.yoga_positions['Anglais']==position_label].values[0]
 
             # Display push-up count and controls with black text on a white stripe
             draw_text_with_background(image, "Press 'r' to reset count", (5, 20))
             draw_text_with_background(image, "Press 'q' to quit", (5, 40))
             draw_text_with_background(image, "Press 'f' for full screen", (5, 60))
             draw_text_with_background(image, f"Mode (press 'm' to toggle): {mode}", (5, 80))
-            if mode=='yoga':
-                position_label=self.yoga_positions['Francais'][self.yoga_positions['Anglais']==position_label].values[0]
-            
             draw_text_with_background(image, f"AI classification: {position_label}", (5, 100))
+
             # Add counter
             if mode=='push-up':
                 # Update counter
-                if position_label=='position_up' and position_label!=self.previous_position_label and self.previous_position_label!=None:
+                if position_label=='position_up' and self.previous_position_label=='position_down':
                     self.pushup_count +=1
                     self.sparkle_frames = 10  # Trigger sparkles for next 10 frames
                     pygame.mixer.music.play()
@@ -527,20 +527,12 @@ class Post_processing:
     
     def load_yoga_images(self):
         self.yoga_positions=pd.read_csv('./embeddings/yoga_positions.csv')
-        base_folder='/home/romain.meunier@Digital-Grenoble.local/.cache/kagglehub/datasets/tr1gg3rtrash/yoga-posture-dataset/versions/1'
-        self.yoga_images_path={}
-        for label in os.listdir(base_folder):
-            label_folder = os.path.join(base_folder, label)
-            if not os.path.isdir(label_folder):
-                continue
-            self.yoga_images_path[label]={}
-            for i,image_name in enumerate(os.listdir(label_folder)):
-                self.yoga_images_path[label][i] = os.path.join(label_folder, image_name)
-        self.yoga_images_path=pd.DataFrame(self.yoga_images_path).iloc[0,:].to_dict()
+        
         self.yoga_images={}
-        for label in self.yoga_images_path:
-            yoga_image = cv2.imread(self.yoga_images_path[label], cv2.IMREAD_UNCHANGED)
-            self.yoga_images[label] = cv2.resize(yoga_image, (1400,800))
+        yoga_folder='./media/yoga_images'
+        for image_name in os.listdir(yoga_folder):
+            yoga_image = cv2.imread(os.path.join(yoga_folder, image_name), cv2.IMREAD_UNCHANGED)
+            self.yoga_images['{}'.format(os.path.splitext(image_name)[0])] = cv2.resize(yoga_image, (1400,800))
             
 def overlay_image(background, overlay, x, y, scale=0.1):
     """Overlay an image onto another at a specified position with scaling."""

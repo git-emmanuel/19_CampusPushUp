@@ -37,29 +37,22 @@ def run_video_capture(video_path='webcam'):
         
         # Mode affiliation
         mode=modes[mode_index]
-
+        match mode:
+            case 'push-up':
+                model = pushup_model
+            case 'yoga':
+                model = yoga_model
+            case _:
+                model = None
+                prediction = None
         # Model Prediction
         frames+=1
         if frames >= run_predict_every_n_frames:
             frames=0
-            
-            match mode:
-                case 'push-up':
-                    model = pushup_model
-                case 'yoga':
-                    model = yoga_model
-                case _:
-                    prediction = None
-
             if model is not None : 
                 prediction = model.predict(image)
                 prediction = model.mean_predict(prediction)
-                previous_prediction=prediction
-        else : 
-            try :
-                prediction = previous_prediction
-            except :
-                prediction = None
+
 
         # Image post-processing 
         image = ppi.image_post_processing_poselandmark(image)  
