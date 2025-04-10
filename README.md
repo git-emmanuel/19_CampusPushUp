@@ -1,7 +1,7 @@
 
 # Computer Vision Project
 
-<img src="logo.png" width="200" />
+<img src="media/logo.png" width="200" />
 
 Welcome to the CampusPushUp repository. 
 
